@@ -1,4 +1,8 @@
 // server.js
+
+// Load environment variables from .env.local
+require('dotenv').config({ path: './.env.local' });
+
 const { createServer } = require('http');
 const next = require('next');
 const { Server } = require('socket.io');
@@ -35,7 +39,6 @@ app.prepare().then(() => {
     });
 
     // Make the io instance globally available for other parts of the app if needed
-    // (e.g., for broadcasting from the file upload API route)
     global.io = io;
 
     // --- Main Socket.IO Connection Logic ---
