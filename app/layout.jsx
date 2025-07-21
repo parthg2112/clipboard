@@ -6,19 +6,23 @@ import Footer from "./footer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Secure Live Clipboard",
-  description: "End-to-end encrypted live clipboard.",
+  title: "Live Clipboard",
+  description: "End-to-end encrypted live clipboard",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-black`}>
         <ParticleBackground />
-        <main className="relative z-10">{children}</main>
-      <Footer/>
+        {/* The z-10 ensures all content renders on top of the particles */}
+        <main className="relative z-10 min-h-screen flex flex-col">
+          <div className="flex-grow">
+            {children}
+          </div>
+          <Footer/>
+        </main>
       </body>
-      
     </html>
   );
 }

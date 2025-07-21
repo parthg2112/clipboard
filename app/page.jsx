@@ -20,82 +20,88 @@ export default function HomePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // --- FIXED: Connect directly to the server without a 'path'. ---
-    // This resolves the 404 spam in your server logs.
     const socketConnection = io({
-        transports: ['websocket'],
+      transports: ['websocket'],
     });
 
     socketConnection.on('connect', () => {
-        console.log('Socket connected successfully:', socketConnection.id);
-        setSocket(socketConnection);
-        toast.success('Connected!');
-        setConnectionStatus(prev => ({ ...prev, socket: 'connected' }));
-        // Request database status check
-        socketConnection.emit('test-connection');
+      setSocket(socketConnection);
+      toast.success('Connected!');
+      setConnectionStatus(prev => ({ ...prev, socket: 'connected' }));
+      socketConnection.emit('test-connection');
     });
 
     socketConnection.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', reason);
-        toast.error('Connection lost. Reconnecting...');
-        setSocket(null);
-        setIsAuthenticated(false);
-        setConnectionStatus({ socket: 'disconnected', mongodb: 'unknown' });
+      console.log('Socket disconnected:', reason);
+      toast.error('Connection lost. Reconnecting...');
+      setSocket(null);
+      setIsAuthenticated(false);
+      setConnectionStatus({ socket: 'disconnected', mongodb: 'unknown' });
     });
 
     socketConnection.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
+      console.error('Socket connection error:', error);
     });
-    
+
     socketConnection.on('connection-status', (status) => {
-        setConnectionStatus(status);
-        if(status.mongodb === 'failed') {
-          toast.error('Database connection failed.');
-        }
+      setConnectionStatus(status);
+      if (status.mongodb === 'failed') {
+        toast.error('Database connection failed.');
+      }
     });
 
     socketConnection.on('authentication-success', () => {
-        toast.success('Room unlocked!');
-        setIsAuthenticated(true);
-        setIsDataLoading(false);
+      toast.success('Room unlocked!');
+      setIsAuthenticated(true);
+      setIsDataLoading(false);
+    });
+    // --- ADDED: Listen for the room deletion event ---
+    socketConnection.on('room-deleted', () => {
+      toast.error('This room has been permanently deleted.', {
+        duration: 5000,
+      });
+      // Force a reload to send the user back to the password screen
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     });
 
     socketConnection.on('authentication-failed', (error) => {
-        toast.error(`Authentication failed: ${error.message}`);
-        setIsDataLoading(false);
-        setRoomId(null);
-        setEncryptionKey(null);
-        setIsAuthenticated(false);
+      toast.error(`Authentication failed: ${error.message}`);
+      setIsDataLoading(false);
+      setRoomId(null);
+      setEncryptionKey(null);
+      setIsAuthenticated(false);
     });
 
     socketConnection.on('room-data', (data) => {
-        setClipboard({
-            textNotes: data.textNotes || [],
-            files: data.files || []
-        });
+      setClipboard({
+        textNotes: data.textNotes || [],
+        files: data.files || []
+      });
     });
 
     socketConnection.on('note-added', (newNote) => {
-        setClipboard(prev => ({ ...prev, textNotes: [...prev.textNotes, newNote] }));
+      setClipboard(prev => ({ ...prev, textNotes: [...prev.textNotes, newNote] }));
     });
     socketConnection.on('note-updated', ({ noteId, encryptedContent }) => {
-        setClipboard(prev => ({
-            ...prev,
-            textNotes: prev.textNotes.map(n => n.id === noteId ? { ...n, content: encryptedContent, updatedAt: new Date() } : n)
-        }));
+      setClipboard(prev => ({
+        ...prev,
+        textNotes: prev.textNotes.map(n => n.id === noteId ? { ...n, content: encryptedContent, updatedAt: new Date() } : n)
+      }));
     });
     socketConnection.on('note-deleted', (noteId) => {
-        setClipboard(prev => ({ ...prev, textNotes: prev.textNotes.filter(n => n.id !== noteId) }));
+      setClipboard(prev => ({ ...prev, textNotes: prev.textNotes.filter(n => n.id !== noteId) }));
     });
     socketConnection.on('file-added', (newFile) => {
-        setClipboard(prev => ({ ...prev, files: [...prev.files, newFile] }));
+      setClipboard(prev => ({ ...prev, files: [...prev.files, newFile] }));
     });
     socketConnection.on('file-deleted', (fileId) => {
-        setClipboard(prev => ({ ...prev, files: prev.files.filter(f => f.id !== fileId) }));
+      setClipboard(prev => ({ ...prev, files: prev.files.filter(f => f.id !== fileId) }));
     });
-    
+
     return () => {
-        socketConnection.disconnect();
+      socketConnection.disconnect();
     };
   }, []);
 
@@ -103,15 +109,15 @@ export default function HomePage() {
     if (!password) return;
     setIsDataLoading(true);
     const loadingToast = toast.loading('Encrypting and joining room...');
-    
+
     try {
       const derivedRoomId = await getRoomId(password);
       const key = await deriveKey(password, derivedRoomId);
       const passwordHash = await hashPassword(password);
-      
+
       setRoomId(derivedRoomId);
       setEncryptionKey(key);
-      
+
       if (socket && socket.connected) {
         socket.emit('authenticate-room', { roomId: derivedRoomId, passwordHash });
       } else {
@@ -125,7 +131,7 @@ export default function HomePage() {
       setIsDataLoading(false);
     }
   };
-  
+
   const handleLogout = () => {
     window.location.reload();
   };

@@ -3,21 +3,21 @@
 import { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 
-export default function PasswordScreen({ onSubmit }) {
+export default function PasswordScreen({ onSubmit, isLoading }) {
   const [password, setPassword] = useState('');
 
-  /** @param {React.FormEvent} e */
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (password) {
+    if (password && !isLoading) {
       onSubmit(password);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ fontFamily: 'Verdana, sans-serif' }}>
-      <div className="fixed inset-0 bg-black"></div>
-      <div id="particle-container" className="fixed inset-0 pointer-events-none" />
+    // The main container is now a flex container to center the content vertically and horizontally
+    <div className="min-h-screen w-full flex items-center justify-center p-4">
+      
+      {/* Removed the solid black background div to let particles show */}
       
       <div className="relative w-full max-w-md">
         <div 
@@ -25,9 +25,9 @@ export default function PasswordScreen({ onSubmit }) {
           style={{
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1))',
-            borderColor: 'rgba(255, 255, 255, 0.3)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2)'
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))',
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
           }}
         >
           <div className="p-8 sm:p-10 text-white">
@@ -50,10 +50,7 @@ export default function PasswordScreen({ onSubmit }) {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-xl px-6 py-4 text-white placeholder-white/60 focus:ring-2 focus:ring-cyan-300/50 focus:border-cyan-300/50 focus:outline-none transition-all duration-300 text-base border"
                   style={{ 
-                    fontFamily: 'Verdana, sans-serif',
                     background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)',
                     borderColor: 'rgba(255, 255, 255, 0.3)'
                   }}
                   placeholder="Enter Room Password"
@@ -62,33 +59,19 @@ export default function PasswordScreen({ onSubmit }) {
               
               <button
                 type="submit"
-                className="relative w-full group overflow-hidden rounded-xl py-4 px-6 font-bold text-base transition-all duration-300 disabled:cursor-not-allowed"
+                className="relative w-full group overflow-hidden rounded-xl py-4 px-6 font-bold text-base transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50"
                 style={{
-                  background: password ? 'linear-gradient(135deg, #06b6d4, #0891b2)' : 'linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(8, 145, 178, 0.3))',
-                  color: password ? '#0f172a' : '#64748b'
+                  background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                  color: '#0f172a'
                 }}
-                disabled={!password}
+                disabled={!password || isLoading}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <span>Unlock Clipboard</span>
+                <span>{isLoading ? 'Unlocking...' : 'Unlock Clipboard'}</span>
               </button>
             </form>
-
-            <div 
-              className="mt-10 p-4 rounded-xl text-white/90 text-xs text-center leading-relaxed border"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06))',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                borderColor: 'rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              <p className="font-bold text-yellow-300 mb-1">Remember</p>
-              <p>This password is your key. If forgotten, your data is unrecoverable.</p>
-            </div>
           </div>
         </div>
-        <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-cyan-400/20 via-transparent to-purple-400/20 blur-xl -z-10"></div>
       </div>
     </div>
   );

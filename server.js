@@ -16,7 +16,6 @@ const port = 3000;
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
-// --- MongoDB Setup ---
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.CLIPBOARD_DB_NAME || 'live_clipboard';
 if (!MONGODB_URI) {
@@ -25,40 +24,46 @@ if (!MONGODB_URI) {
 const clientPromise = new MongoClient(MONGODB_URI).connect();
 console.log('MongoDB client configured.');
 
-// --- Automatic Cleanup Logic ---
+const deleteClipboardData = async (clipboard) => {
+    if (!clipboard) return;
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+
+    if (clipboard.files && clipboard.files.length > 0) {
+        console.log(`Deleting ${clipboard.files.length} files for room ${clipboard._id}`);
+        for (const file of clipboard.files) {
+            try {
+                const filePath = path.join(process.cwd(), 'public', file.url);
+                await fs.unlink(filePath);
+            } catch (err) {
+                if (err.code !== 'ENOENT') {
+                    console.error(`Error deleting file ${file.url}:`, err);
+                }
+            }
+        }
+    }
+    await db.collection('clipboards').deleteOne({ _id: clipboard._id });
+    console.log(`Deleted clipboard for room ${clipboard._id}`);
+};
+
 const cleanupInactiveClipboards = async () => {
     console.log('Running cleanup job for inactive clipboards...');
     try {
         const client = await clientPromise;
         const db = client.db(DB_NAME);
-        const collection = db.collection('clipboards');
-        const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+        const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
 
-        const inactiveClipboards = await collection.find({
-            lastUpdated: { $lt: sixHoursAgo }
+        const inactiveClipboards = await db.collection('clipboards').find({
+            lastUpdated: { $lt: oneHourAgo }
         }).toArray();
 
-        if (inactiveClipboards.length === 0) {
-            console.log('Cleanup: No inactive clipboards found.');
-            return;
-        }
-
-        console.log(`Cleanup: Found ${inactiveClipboards.length} inactive clipboard(s) to delete.`);
-        for (const clipboard of inactiveClipboards) {
-            if (clipboard.files && clipboard.files.length > 0) {
-                for (const file of clipboard.files) {
-                    try {
-                        const filePath = path.join(process.cwd(), 'public', file.url);
-                        await fs.unlink(filePath);
-                    } catch (err) {
-                        if (err.code !== 'ENOENT') {
-                            console.error(`Cleanup: Error deleting file ${file.url}:`, err);
-                        }
-                    }
-                }
+        if (inactiveClipboards.length > 0) {
+            console.log(`Cleanup: Found ${inactiveClipboards.length} inactive clipboard(s).`);
+            for (const clipboard of inactiveClipboards) {
+                await deleteClipboardData(clipboard);
             }
-            await collection.deleteOne({ _id: clipboard._id });
-            console.log(`Cleanup: Deleted clipboard for room ${clipboard._id}`);
+        } else {
+            console.log('Cleanup: No inactive clipboards found.');
         }
     } catch (error) {
         console.error('Error during clipboard cleanup job:', error);
@@ -70,17 +75,14 @@ cron.schedule('0 * * * *', cleanupInactiveClipboards);
 app.prepare().then(() => {
     const httpServer = createServer(handler);
     const io = new Server(httpServer, {
-        cors: {
-            origin: `http://localhost:${port}`,
-            methods: ['GET', 'POST'],
-        },
+        cors: { origin: `http://localhost:${port}`, methods: ['GET', 'POST'] },
     });
     global.io = io;
 
     io.on('connection', (socket) => {
         console.log(`Client connected: ${socket.id}`);
 
-        // --- FIXED: Re-added the missing test-connection handler ---
+        // --- FIXED: Re-added the missing database connection test ---
         socket.on('test-connection', async () => {
             try {
                 const client = await clientPromise;
@@ -96,6 +98,24 @@ app.prepare().then(() => {
                     mongodb: 'failed',
                     error: error.message,
                 });
+            }
+        });
+
+        socket.on('delete-room', async ({ roomId }) => {
+            if (socket.roomId !== roomId) {
+                return socket.emit('error', { message: 'Authentication error.' });
+            }
+            try {
+                const client = await clientPromise;
+                const db = client.db(DB_NAME);
+                const clipboard = await db.collection('clipboards').findOne({ _id: roomId });
+                
+                if (clipboard) {
+                    await deleteClipboardData(clipboard);
+                    io.to(roomId).emit('room-deleted');
+                }
+            } catch (error) {
+                socket.emit('error', { message: 'Failed to delete room.' });
             }
         });
 
@@ -173,7 +193,5 @@ app.prepare().then(() => {
     httpServer.listen(port, () => {
         console.log(`> Ready on http://${hostname}:${port}`);
         cleanupInactiveClipboards();
-    }).on('error', (err) => {
-        console.error(err);
     });
 });
