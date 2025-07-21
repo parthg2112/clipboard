@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { decrypt } from '../lib/crypto';
-import { Download, Trash2, File } from 'lucide-react';
+import { Download, X, File as FileIcon } from 'lucide-react';
 
-export default function FileCard({ file, encryptionKey, onDelete }) {
-  const [decryptedName, setDecryptedName] = useState('Decrypting...');
+export default function FileCard({ file, encryptionKey, roomId }) {
+  const [decryptedName, setDecryptedName] = useState('...');
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     const decryptName = async () => {
@@ -14,29 +15,62 @@ export default function FileCard({ file, encryptionKey, onDelete }) {
     };
     decryptName();
   }, [file.name, encryptionKey]);
+  
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this file?")) return;
+    try {
+      const response = await fetch(`/api/files?roomId=${roomId}&fileId=${file.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Delete failed');
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      alert("Could not delete file.");
+    }
+  };
 
-  const isImage = file.type.startsWith('image/');
+  const isImage = file.type?.startsWith('image/');
 
   return (
-    <div className="bg-gray-700 p-3 rounded-lg flex flex-col justify-between transition-all hover:bg-gray-600">
-      <div>
-        {isImage ? (
-          <img src={file.url} alt={decryptedName} className="w-full h-24 object-cover rounded-md mb-2" />
-        ) : (
-          <div className="w-full h-24 bg-gray-800 rounded-md mb-2 flex items-center justify-center">
-            <File className="h-10 w-10 text-gray-500" />
-          </div>
-        )}
-        <p className="text-sm font-medium text-white truncate" title={decryptedName}>{decryptedName}</p>
-        <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
+    <div 
+      className="relative group w-44"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="bg-gray-900/50 border border-gray-600 rounded-xl p-3 hover:border-white transition-all duration-300 w-full h-40 flex flex-col">
+        <div className="flex justify-end items-start mb-2 flex-shrink-0">
+          <button 
+            onClick={handleDelete} 
+            className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all duration-200 p-1"
+          >
+            <X size={14} />
+          </button>
+        </div>
+        
+        <div className="w-full flex-grow bg-gray-800 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
+          {isImage ? (
+            <img 
+              src={file.url} 
+              alt={decryptedName} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <FileIcon className="h-8 w-8 text-slate-500" />
+          )}
+        </div>
+        
+        <p className="text-xs text-gray-400 truncate leading-relaxed mt-auto px-1 flex-shrink-0">{decryptedName}</p>
       </div>
-      <div className="mt-3 flex gap-2">
-        <a href={file.url} target="_blank" download={decryptedName} className="flex-1 flex items-center justify-center gap-1 text-center bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-1 px-2 rounded transition-all">
-          <Download size={12} /> Download
+      
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-4 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <a 
+          href={file.url} 
+          download={decryptedName} 
+          className="p-3 rounded-full bg-black/60 backdrop-blur-sm text-slate-200 hover:text-cyan-300 transition-colors"
+          title="Download"
+        >
+          <Download size={20} />
         </a>
-        <button onClick={() => onDelete(file)} className="flex-1 flex items-center justify-center gap-1 text-center bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-1 px-2 rounded transition-all">
-          <Trash2 size={12} /> Delete
-        </button>
       </div>
     </div>
   );

@@ -1,9 +1,24 @@
-@import "tailwind/preflight";
-@tailwind utilities;
+@import "tailwindcss/preflight";
+@import "tailwindcss";
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: #000000; /* Pure black background */
+.glowing-border {
+  border: 1px solid transparent;
+  background-image: linear-gradient(to right, #000, #000), linear-gradient(90deg, #4f4f4f 50%, transparent 50%), linear-gradient(90deg, #4f4f4f 50%, transparent 50%), linear-gradient(to right, #000, #000), linear-gradient(to right, #000, #000);
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  background-size: 8px 1px, 8px 1px, 1px 8px, 1px 8px;
+  background-position: 0 0, 0 100%, 0 0, 100% 0;
+  animation: border-glow 2s infinite linear;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2), 0 0 20px rgba(0, 255, 255, 0.1);
+}
+
+.glowing-border-hover {
+  border: 1px solid #4f4f4f;
+  transition: all 0.3s ease;
+}
+
+.glowing-border-hover:hover {
+  border-color: #06b6d4;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
 }
 
 /* Particle Background Container */
@@ -38,17 +53,9 @@ body {
     }
 }
 
-/* Custom scrollbar for a better look */
-::-webkit-scrollbar {
-    width: 8px;
-}
-::-webkit-scrollbar-track {
-    background: #1f2937;
-}
-::-webkit-scrollbar-thumb {
-    background: #4b5563;
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
+/* Set body background to black without overriding component styles */
+body {
+    background-color: #000000;
+    margin: 0;
+    padding: 0;
 }
