@@ -6,8 +6,6 @@ import { v4 as uuidv4 } from 'uuid';
 
 const DB_NAME = process.env.CLIPBOARD_DB_NAME || 'live_clipboard';
 
-// In app/api/files/route.js
-
 export async function POST(req) {
   try {
     const formData = await req.formData();
@@ -20,7 +18,8 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // ✅ START: ADD THIS MISSING LOGIC BACK
+    console.log(`Processing file upload for room: ${roomId}`);
+
     // Create uploads directory if it doesn't exist
     const uploadDir = path.join(process.cwd(), 'public', 'uploads');
     await fs.mkdir(uploadDir, { recursive: true });
@@ -35,60 +34,123 @@ export async function POST(req) {
     const buffer = Buffer.from(bytes);
     await fs.writeFile(filePath, buffer);
 
-    // Define the newFile object before using it
+    console.log(`File saved to: ${filePath}`);
+
+    // Define the newFile object
     const newFile = {
       id: uuidv4(),
       name: encryptedName,
       url: `/uploads/${uniqueFilename}`,
       type: file.type,
       size: file.size,
-      createdAt: Date.now(),
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
-    // ✅ END: ADD THIS MISSING LOGIC BACK
 
     // Save to MongoDB
     const client = await clientPromise;
     const db = client.db(DB_NAME);
-    await db.collection('clipboards').updateOne(
+    
+    const result = await db.collection('clipboards').updateOne(
       { _id: roomId },
       { 
-        $push: { files: newFile }, // This will now work
-        $setOnInsert: { textNotes: [] } 
+        $push: { files: newFile },
+        $set: { lastUpdated: new Date() },
+        $setOnInsert: { 
+          textNotes: [],
+          createdAt: new Date()
+        }
       },
       { upsert: true }
     );
 
+    console.log('File saved to MongoDB:', result.modifiedCount > 0 || result.upsertedCount > 0);
+
+    // Broadcast via Socket.IO
     if (global.io) {
       global.io.to(roomId).emit('file-added', newFile);
+      console.log(`File broadcasted to room: ${roomId}`);
+    } else {
+      console.warn('Socket.IO not available for broadcasting file-added event');
     }
 
-    return NextResponse.json({ success: true, file: newFile });
+    return NextResponse.json({ 
+      success: true, 
+      file: newFile,
+      message: 'File uploaded successfully'
+    });
   } catch (error) {
     console.error('File upload error:', error);
-    return NextResponse.json({ error: 'Error processing file upload' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Error processing file upload',
+      details: error.message 
+    }, { status: 500 });
   }
 }
 
 export async function DELETE(req) {
   try {
-    // [Code for getting params and deleting from filesystem remains the same]
+    const { searchParams } = new URL(req.url);
+    const roomId = searchParams.get('roomId');
+    const fileId = searchParams.get('fileId');
 
-    // Remove from MongoDB
-    await db.collection('clipboards').updateOne(
-      { _id: roomId },
-      { $pull: { files: { id: fileId } } }
-    );
-
-    // ✅ **FIX:** Notify clients via Socket.IO only if it's available
-    if (global.io) {
-      global.io.to(roomId).emit('file-deleted', fileId);
-    } else {
-      console.warn('Socket.IO server not initialized. Skipping broadcast.');
+    if (!roomId || !fileId) {
+      return NextResponse.json({ error: 'Missing roomId or fileId' }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    console.log(`Deleting file ${fileId} from room: ${roomId}`);
+
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+
+    // Get file info before deletion for cleanup
+    const clipboard = await db.collection('clipboards').findOne(
+      { _id: roomId },
+      { projection: { files: { $elemMatch: { id: fileId } } } }
+    );
+
+    if (clipboard?.files?.length > 0) {
+      const fileToDelete = clipboard.files[0];
+      
+      // Delete file from filesystem
+      try {
+        const filePath = path.join(process.cwd(), 'public', fileToDelete.url);
+        await fs.unlink(filePath);
+        console.log(`File deleted from filesystem: ${filePath}`);
+      } catch (fsError) {
+        console.error('Error deleting file from filesystem:', fsError);
+        // Continue with database deletion even if file cleanup fails
+      }
+    }
+
+    // Remove from MongoDB
+    const result = await db.collection('clipboards').updateOne(
+      { _id: roomId },
+      { 
+        $pull: { files: { id: fileId } },
+        $set: { lastUpdated: new Date() }
+      }
+    );
+
+    console.log('File removed from MongoDB:', result.modifiedCount > 0);
+
+    // Broadcast via Socket.IO
+    if (global.io) {
+      global.io.to(roomId).emit('file-deleted', fileId);
+      console.log(`File deletion broadcasted to room: ${roomId}`);
+    } else {
+      console.warn('Socket.IO not available for broadcasting file-deleted event');
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'File deleted successfully'
+    });
   } catch (error) {
     console.error('File deletion error:', error);
-    return NextResponse.json({ error: 'Error deleting file' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Error deleting file',
+      details: error.message 
+    }, { status: 500 });
   }
 }

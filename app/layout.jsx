@@ -16,8 +16,9 @@ export default function RootLayout({ children }) {
       <body className={inter.className}>
         <ParticleBackground />
         <main className="relative z-10">{children}</main>
-      </body>
       <Footer/>
+      </body>
+      
     </html>
   );
 }
