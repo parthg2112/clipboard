@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
-import { clientPromise } from '../../../lib/mongodb';
+import clientPromise from '../../lib/mongodb';
 import { v4 as uuidv4 } from 'uuid';
 
 const DB_NAME = process.env.CLIPBOARD_DB_NAME || 'live_clipboard';
