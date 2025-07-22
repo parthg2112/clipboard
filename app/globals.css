@@ -17,23 +17,84 @@ body {
     z-index: 0; /* Behind main content but visible */
     pointer-events: none;
     overflow: hidden;
+    font-family: 'Courier New', monospace;
 }
 
-/* Individual Particle Styling */
-.particle {
+/* Matrix Column Container */
+.matrix-column {
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    animation: pulse 4s infinite ease-in-out;
+    width: 20px;
+    height: 100vh;
+    overflow: hidden;
+    animation: matrixRain linear infinite;
+    animation-duration: inherit;
 }
 
-@keyframes pulse {
+/* Individual Matrix Character Styling */
+.matrix-char {
+    position: absolute;
+    width: 20px;
+    height: 25px;
+    color: #00ff41; /* Classic Matrix green */
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 25px;
+    text-shadow: 0 0 10px #00ff41;
+    animation: matrixFade ease-in-out infinite;
+    font-family: 'Courier New', monospace;
+}
+
+/* Matrix rain animation - moves columns down */
+@keyframes matrixRain {
+    0% {
+        transform: translateY(-100vh);
+    }
+    100% {
+        transform: translateY(100vh);
+    }
+}
+
+/* Character fade in/out animation */
+@keyframes matrixFade {
     0%, 100% {
         opacity: 0.1;
-        transform: scale(0.8);
+        text-shadow: 0 0 5px #00ff41;
+        color: #004d1a;
+    }
+    25% {
+        opacity: 0.8;
+        text-shadow: 0 0 15px #00ff41;
+        color: #00ff41;
     }
     50% {
-        opacity: 0.5;
-        transform: scale(1.2);
+        opacity: 1;
+        text-shadow: 0 0 20px #00ff41, 0 0 30px #00ff41;
+        color: #66ff99;
     }
+    75% {
+        opacity: 0.6;
+        text-shadow: 0 0 10px #00ff41;
+        color: #00ff41;
+    }
+}
+
+/* Variant bright characters (leading edge effect) */
+.matrix-char:first-child {
+    color: #ffffff;
+    text-shadow: 0 0 20px #ffffff, 0 0 30px #00ff41;
+    opacity: 1 !important;
+}
+
+/* Add some randomization classes */
+.matrix-char:nth-child(odd) {
+    animation-delay: 0.5s;
+}
+
+.matrix-char:nth-child(3n) {
+    animation-duration: 4s;
+}
+
+.matrix-char:nth-child(5n) {
+    animation-duration: 6s;
 }

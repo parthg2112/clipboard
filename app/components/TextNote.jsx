@@ -63,13 +63,15 @@ export default function TextNote({ note, roomId, encryptionKey, socket, isConnec
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={`relative group h-full ${className}`}
       >
-        <div className="bg-black border border-white rounded-xl p-5 h-full transition-all duration-300 flex flex-col">
-          <div className="flex justify-between items-center mb-4 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <FileText size={18} className="text-gray-400" />
+        <div className="bg-black border border-white rounded-xl p-6 h-full transition-all duration-300 flex flex-col shadow-[0_0_15px_rgba(255,255,255,0.3)] hover:shadow-[0_0_25px_rgba(255,255,255,0.5)]">
+          <div className="flex justify-between items-center mb-5 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5">
+                <FileText size={18} className="text-gray-400" />
+              </div>
               {isSaving && <Loader size={16} className="text-blue-400 animate-spin" />}
             </div>
-            <button onClick={() => setIsModalOpen(true)} disabled={!isConnected} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all duration-200 disabled:opacity-30">
+            <button onClick={() => setIsModalOpen(true)} disabled={!isConnected} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all duration-200 disabled:opacity-30 p-2 rounded-md hover:bg-white/5">
               <X size={16} />
             </button>
           </div>
@@ -77,7 +79,7 @@ export default function TextNote({ note, roomId, encryptionKey, socket, isConnec
             value={decryptedContent}
             onChange={handleContentChange}
             disabled={!isConnected}
-            className="w-full flex-grow bg-transparent text-gray-200 resize-none focus:outline-none text-sm leading-relaxed placeholder-gray-500 disabled:opacity-50"
+            className="w-full flex-grow bg-transparent text-gray-200 resize-none focus:outline-none text-sm leading-relaxed placeholder-gray-500 disabled:opacity-50 px-2 py-3"
             placeholder={isConnected ? "Enter your note..." : "Offline - cannot edit"}
           />
         </div>
