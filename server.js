@@ -31,11 +31,9 @@ const deleteClipboardData = async (clipboard) => {
     const db = client.db(DB_NAME);
 
     if (clipboard.files && clipboard.files.length > 0) {
-        console.log(`Deleting ${clipboard.files.length} files for room ${clipboard._id}`);
         for (const file of clipboard.files) {
             try {
                 const filePath = path.join(process.cwd(), 'public', file.url);
-                // Use fs.promises.unlink for async/await consistency
                 await fs.promises.unlink(filePath);
             } catch (err) {
                 if (err.code !== 'ENOENT') {
@@ -60,12 +58,9 @@ const cleanupInactiveClipboards = async () => {
         }).toArray();
 
         if (inactiveClipboards.length > 0) {
-            console.log(`Cleanup: Found ${inactiveClipboards.length} inactive clipboard(s).`);
             for (const clipboard of inactiveClipboards) {
                 await deleteClipboardData(clipboard);
             }
-        } else {
-            console.log('Cleanup: No inactive clipboards found.');
         }
     } catch (error) {
         console.error('Error during clipboard cleanup job:', error);
@@ -80,8 +75,6 @@ app.prepare().then(() => {
             const parsedUrl = parse(req.url, true);
             const { pathname } = parsedUrl;
 
-            // --- Static File Serving Logic ---
-            // This block checks if the request is for an uploaded file.
             if (pathname.startsWith('/uploads/')) {
                 const filePath = path.join(process.cwd(), 'public', pathname);
                 fs.stat(filePath, (err, stats) => {
@@ -95,7 +88,6 @@ app.prepare().then(() => {
                     readStream.pipe(res);
                 });
             } else {
-                // For all other requests, let Next.js handle it
                 await handle(req, res, parsedUrl);
             }
         } catch (err) {
@@ -111,8 +103,6 @@ app.prepare().then(() => {
     global.io = io;
 
     io.on('connection', (socket) => {
-        console.log(`Client connected: ${socket.id}`);
-
         socket.on('test-connection', async () => {
             try {
                 const client = await clientPromise;
@@ -122,7 +112,6 @@ app.prepare().then(() => {
                     mongodb: 'connected',
                 });
             } catch (error) {
-                console.error('MongoDB connection failed on test:', error.message);
                 socket.emit('connection-status', {
                     socket: 'connected',
                     mongodb: 'failed',
@@ -132,9 +121,7 @@ app.prepare().then(() => {
         });
 
         socket.on('delete-room', async ({ roomId }) => {
-            if (socket.roomId !== roomId) {
-                return socket.emit('error', { message: 'Authentication error.' });
-            }
+            if (socket.roomId !== roomId) return;
             try {
                 const client = await clientPromise;
                 const db = client.db(DB_NAME);
@@ -150,7 +137,7 @@ app.prepare().then(() => {
         });
 
         const updateRoomTimestamp = async (roomId) => {
-            try {
+             try {
                 const client = await clientPromise;
                 await client.db(DB_NAME).collection('clipboards').updateOne(
                     { _id: roomId },
@@ -191,11 +178,19 @@ app.prepare().then(() => {
             if (socket.roomId !== roomId) return;
             const client = await clientPromise;
             const db = client.db(DB_NAME);
+
+            // UPDATED: Server-side check for new 4-note limit
+            const room = await db.collection('clipboards').findOne({ _id: roomId }, { projection: { textNotes: 1 } });
+            if (room && room.textNotes && room.textNotes.length >= 4) {
+                socket.emit('error', { message: 'Maximum 4 text notes allowed.' });
+                return;
+            }
+
             const noteWithTimestamp = { ...note, createdAt: new Date(), updatedAt: new Date() };
             await db.collection('clipboards').updateOne({ _id: roomId }, { $push: { textNotes: noteWithTimestamp }, $set: { lastUpdated: new Date() } });
             io.to(roomId).emit('note-added', noteWithTimestamp);
         });
-
+    
         socket.on('update-note', async ({ roomId, noteId, encryptedContent }) => {
             if (socket.roomId !== roomId) return;
             const client = await clientPromise;
@@ -213,10 +208,6 @@ app.prepare().then(() => {
             const db = client.db(DB_NAME);
             await db.collection('clipboards').updateOne({ _id: roomId }, { $pull: { textNotes: { id: noteId } }, $set: { lastUpdated: new Date() } });
             io.to(roomId).emit('note-deleted', noteId);
-        });
-
-        socket.on('disconnect', (reason) => {
-            console.log(`Client ${socket.id} disconnected: ${reason}`);
         });
     });
 

@@ -1,25 +1,29 @@
 "use client";
 
 import { useState } from 'react';
+// You may need to install lucide-react: npm install lucide-react
 import { ShieldCheck } from 'lucide-react';
 
-export default function PasswordScreen({ onSubmit, isLoading }) {
+export default function PasswordScreen({ onSubmit }) {
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (password && !isLoading) {
+      // Example of showing a loading state
+      setIsLoading(true);
+      // Pass the password to the parent component's function
       onSubmit(password);
+      // You might want to handle the end of loading state in the parent component
+      setTimeout(() => setIsLoading(false), 2000); 
     }
   };
 
   return (
-    // The main container is now a flex container to center the content vertically and horizontally
-    <div className="min-h-screen w-full flex items-center justify-center p-4">
-      
-      {/* Removed the solid black background div to let particles show */}
-      
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-black">
       <div className="relative w-full max-w-md">
+        {/* Main container with glassmorphism styles */}
         <div 
           className="rounded-3xl border shadow-2xl overflow-hidden"
           style={{
@@ -32,6 +36,7 @@ export default function PasswordScreen({ onSubmit, isLoading }) {
         >
           <div className="p-8 sm:p-10 text-white">
             <div className="text-center mb-10">
+              {/* Icon with a decorative glow effect */}
               <div className="relative inline-block mb-5">
                 <div className="absolute inset-0 bg-cyan-400/20 rounded-full blur-xl"></div>
                 <ShieldCheck className="relative mx-auto h-16 w-16 text-cyan-300 drop-shadow-lg" />
@@ -44,11 +49,12 @@ export default function PasswordScreen({ onSubmit, isLoading }) {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="relative">
+                {/* Styled input field */}
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl px-6 py-4 text-white placeholder-white/60 focus:ring-2 focus:ring-cyan-300/50 focus:border-cyan-300/50 focus:outline-none transition-all duration-300 text-base border"
+                  className="w-full rounded-xl px-6 py-4 text-white placeholder-white/60 focus:ring-2 focus:ring-cyan-300/50 focus:outline-none transition-all duration-300 text-base border"
                   style={{ 
                     background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
                     borderColor: 'rgba(255, 255, 255, 0.3)'
@@ -57,12 +63,13 @@ export default function PasswordScreen({ onSubmit, isLoading }) {
                 />
               </div>
               
+              {/* Styled button with gradient and hover effect */}
               <button
                 type="submit"
                 className="relative w-full group overflow-hidden rounded-xl py-4 px-6 font-bold text-base transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50"
                 style={{
                   background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-                  color: '#0f172a'
+                  color: 'white' 
                 }}
                 disabled={!password || isLoading}
               >

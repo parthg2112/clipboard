@@ -7,14 +7,6 @@ body {
     color: #f1f5f9; /* slate-100 for better default text color */
 }
 
-/* Main container utility for consistent padding and max-width */
-@layer components {
-    .main-container {
-        @apply w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8;
-    }
-}
-
-
 /* Particle Background Container */
 #particle-container {
     position: fixed;

@@ -1,13 +1,13 @@
-// components/TextNote.jsx
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { X, FileText, Loader } from 'lucide-react';
 import { encrypt, decrypt } from '../lib/crypto';
 import { toast } from 'react-hot-toast';
 import Modal from './Modal';
 
-export default function TextNote({ note, roomId, encryptionKey, socket, isConnected }) {
+export default function TextNote({ note, roomId, encryptionKey, socket, isConnected, className }) {
   const [decryptedContent, setDecryptedContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,8 +55,15 @@ export default function TextNote({ note, roomId, encryptionKey, socket, isConnec
 
   return (
     <>
-      <div className="relative group">
-        <div className="bg-gray-900/50 border border-gray-600 rounded-xl p-5 h-72 hover:border-white transition-all duration-300 flex flex-col">
+      <motion.div 
+        layout
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className={`relative group h-full ${className}`}
+      >
+        <div className="bg-black border border-white rounded-xl p-5 h-full transition-all duration-300 flex flex-col">
           <div className="flex justify-between items-center mb-4 flex-shrink-0">
             <div className="flex items-center gap-2">
               <FileText size={18} className="text-gray-400" />
@@ -70,17 +77,12 @@ export default function TextNote({ note, roomId, encryptionKey, socket, isConnec
             value={decryptedContent}
             onChange={handleContentChange}
             disabled={!isConnected}
-            className="w-full h-full bg-transparent text-gray-200 resize-none focus:outline-none text-sm leading-relaxed placeholder-gray-500 disabled:opacity-50"
+            className="w-full flex-grow bg-transparent text-gray-200 resize-none focus:outline-none text-sm leading-relaxed placeholder-gray-500 disabled:opacity-50"
             placeholder={isConnected ? "Enter your note..." : "Offline - cannot edit"}
           />
         </div>
-      </div>
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Delete Note"
-      >
+      </motion.div>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onConfirm={handleDeleteConfirm} title="Delete Note">
         <p>Are you sure you want to permanently delete this note?</p>
       </Modal>
     </>
