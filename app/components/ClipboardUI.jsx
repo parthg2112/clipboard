@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Share2, LogOut, Plus, Wifi, WifiOff, Database, UploadCloud, Trash2 } from 'lucide-react';
+import { Plus, UploadCloud } from 'lucide-react';
 import { encrypt } from '../lib/crypto';
 import TextNote from './TextNote';
 import FileCard from './FileCard';
 import Lightbox from './Lightbox';
 import Modal from './Modal';
+import ClipboardNavbar from './ClipboardNavbar';
 
 export default function ClipboardUI({
   roomId,
@@ -34,10 +35,17 @@ export default function ClipboardUI({
       return;
     }
     try {
-      const newNote = { id: Date.now().toString(), content: '' };
-      const encryptedContent = await encrypt('', encryptionKey);
-      newNote.content = encryptedContent;
-      socket.emit('add-note', { roomId, note: newNote });
+      // After 2nd note is added, add 2 notes at once
+      const notesToAdd = noteCount >= 2 ? 2 : 1;
+      const remainingSlots = MAX_NOTES - noteCount;
+      const actualNotesToAdd = Math.min(notesToAdd, remainingSlots);
+      
+      for (let i = 0; i < actualNotesToAdd; i++) {
+        const newNote = { id: (Date.now() + i).toString(), content: '' };
+        const encryptedContent = await encrypt('', encryptionKey);
+        newNote.content = encryptedContent;
+        socket.emit('add-note', { roomId, note: newNote });
+      }
     } catch (err) {
       toast.error("Could not create note.");
     }
@@ -95,86 +103,66 @@ export default function ClipboardUI({
   };
 
   return (
-    <div {...getRootProps()} className="flex flex-col min-h-screen w-full outline-none bg-black">
-      {isDragActive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-md border-4 border-dashed border-cyan-400 rounded-3xl">
-          <div className="text-center">
-            <UploadCloud size={64} className="mx-auto text-cyan-300 animate-bounce" />
-            <p className="mt-4 text-2xl font-bold text-white">Drop files to upload</p>
+    <>
+      <ClipboardNavbar
+        connectionStatus={connectionStatus}
+        onShare={handleShare}
+        onDeleteRoom={() => setIsDeleteModalOpen(true)}
+        onLogout={onLogout}
+      />
+      
+      <div {...getRootProps()} className="flex flex-col min-h-screen w-full outline-none bg-black" style={{ paddingTop: '88px' }}>
+        {isDragActive && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-md border-4 border-dashed border-cyan-400 rounded-3xl" style={{ zIndex: 10000 }}>
+            <div className="text-center">
+              <UploadCloud size={64} className="mx-auto text-cyan-300 animate-bounce" />
+              <p className="mt-4 text-2xl font-bold text-white">Drop files to upload</p>
+            </div>
+          </div>
+        )}
+
+        <main className="main-container flex-grow py-8 flex flex-col">
+          <div className="flex-grow flex items-stretch gap-6">
+            <div className={`grid flex-grow gap-6 ${noteCount >= 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                <AnimatePresence>
+                  {clipboard.textNotes?.map((note) => (
+                    <TextNote key={note.id} note={note} roomId={roomId} encryptionKey={encryptionKey} socket={socket} isConnected={isConnected} />
+                  ))}
+                </AnimatePresence>
+            </div>
+            {noteCount < MAX_NOTES && (
+              <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`flex-shrink-0 transition-all duration-500 ease-in-out ${noteCount > 0 ? 'w-20' : 'w-full'}`}>
+                <button onClick={addTextNote} disabled={!isConnected} className="w-full h-full bg-black border-2 border-dashed border-white/20 rounded-xl hover:border-white transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed group">
+                  <Plus size={32} className="text-gray-500 group-hover:text-white transition-colors duration-200" />
+                </button>
+              </motion.div>
+            )}
+          </div>
+        </main>
+
+        <div className="main-container flex-shrink-0 py-6 mt-auto">
+          <h2 className="text-xl font-semibold text-gray-200 mb-6 tracking-wider">Files</h2>
+          <div className="flex items-center gap-6 pb-4 overflow-x-auto">
+            {clipboard.files?.map((file) => (
+              <FileCard key={file.id} file={file} encryptionKey={encryptionKey} roomId={roomId} isConnected={isConnected} onImageClick={() => file.type?.startsWith('image/') && setLightboxImage(file.url)} />
+            ))}
+            {clipboard.files?.length < 8 && (
+              <label className={`cursor-pointer flex-shrink-0 ${!isConnected ? 'cursor-not-allowed' : ''}`}>
+                <div className={`bg-black border-2 border-dashed border-white/20 rounded-xl p-4 hover:border-white transition-all duration-300 w-44 h-40 flex items-center justify-center ${!isConnected ? 'opacity-50' : ''} group`}>
+                  <Plus size={28} className="text-gray-500 group-hover:text-white transition-colors duration-200" />
+                </div>
+                <input type="file" className="hidden" multiple onChange={(e) => Array.from(e.target.files).forEach(handleFileUpload)} disabled={!isConnected} />
+              </label>
+            )}
           </div>
         </div>
-      )}
 
-      <header className="main-container flex-shrink-0 py-6 border-b border-white/10">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-wide mb-2">Live Clipboard</h1>
-              <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs">
-                <div className={`flex items-center gap-1.5 ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-                  {isConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
-                  <span>Socket: {connectionStatus.socket}</span>
-                </div>
-                <div className={`flex items-center gap-1.5 ${connectionStatus.mongodb === 'connected' ? 'text-green-400' : 'text-red-400'}`}>
-                  <Database size={14} />
-                  <span>Database: {connectionStatus.mongodb}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 sm:gap-6">
-              <button onClick={handleShare} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors duration-200">
-                <Share2 size={18} /> <span className="text-sm font-medium">Share</span>
-              </button>
-              <button onClick={() => setIsDeleteModalOpen(true)} className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors duration-200">
-                <Trash2 size={18} /> <span className="text-sm font-medium">Delete Room</span>
-              </button>
-              <button onClick={onLogout} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors duration-200">
-                <LogOut size={18} /> <span className="text-sm font-medium">Logout</span>
-              </button>
-            </div>
-        </div>
-      </header>
-
-      <main className="main-container flex-grow py-8 flex flex-col">
-        <div className="flex-grow flex items-stretch gap-6">
-          <div className={`grid flex-grow gap-6 ${noteCount >= 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              <AnimatePresence>
-                {clipboard.textNotes?.map((note) => (
-                  <TextNote key={note.id} note={note} roomId={roomId} encryptionKey={encryptionKey} socket={socket} isConnected={isConnected} />
-                ))}
-              </AnimatePresence>
-          </div>
-          {noteCount < MAX_NOTES && (
-            <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`flex-shrink-0 transition-all duration-500 ease-in-out ${noteCount > 0 ? 'w-20' : 'w-full'}`}>
-              <button onClick={addTextNote} disabled={!isConnected} className="w-full h-full bg-black border-2 border-dashed border-white/20 rounded-xl hover:border-white transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed group">
-                <Plus size={32} className="text-gray-500 group-hover:text-white transition-colors duration-200" />
-              </button>
-            </motion.div>
-          )}
-        </div>
-      </main>
-
-      <div className="main-container flex-shrink-0 py-6 mt-auto">
-        <h2 className="text-xl font-semibold text-gray-200 mb-6 tracking-wider">Files</h2>
-        <div className="flex items-center gap-6 pb-4 overflow-x-auto">
-          {clipboard.files?.map((file) => (
-            <FileCard key={file.id} file={file} encryptionKey={encryptionKey} roomId={roomId} isConnected={isConnected} onImageClick={() => file.type?.startsWith('image/') && setLightboxImage(file.url)} />
-          ))}
-          {clipboard.files?.length < 8 && (
-            <label className={`cursor-pointer flex-shrink-0 ${!isConnected ? 'cursor-not-allowed' : ''}`}>
-              <div className={`bg-black border-2 border-dashed border-white/20 rounded-xl p-4 hover:border-white transition-all duration-300 w-44 h-40 flex items-center justify-center ${!isConnected ? 'opacity-50' : ''} group`}>
-                <Plus size={28} className="text-gray-500 group-hover:text-white transition-colors duration-200" />
-              </div>
-              <input type="file" className="hidden" multiple onChange={(e) => Array.from(e.target.files).forEach(handleFileUpload)} disabled={!isConnected} />
-            </label>
-          )}
-        </div>
+        <Lightbox imageUrl={lightboxImage} onClose={() => setLightboxImage(null)} />
+        <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleDeleteRoomConfirm} title="Delete Entire Room">
+          <p>Are you sure you want to permanently delete this room?</p>
+          <p className="mt-2 font-bold text-red-400">All text notes and files will be lost forever. This action cannot be undone.</p>
+        </Modal>
       </div>
-
-      <Lightbox imageUrl={lightboxImage} onClose={() => setLightboxImage(null)} />
-      <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleDeleteRoomConfirm} title="Delete Entire Room">
-        <p>Are you sure you want to permanently delete this room?</p>
-        <p className="mt-2 font-bold text-red-400">All text notes and files will be lost forever. This action cannot be undone.</p>
-      </Modal>
-    </div>
+    </>
   );
 }
