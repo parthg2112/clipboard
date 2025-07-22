@@ -4,32 +4,23 @@ A real-time, end-to-end encrypted shared clipboard built with Next.js, Socket.IO
 
 ## 🎯 The Problem
 
-In a world where we constantly switch between devices, there's a need for a quick, private, and ephemeral way to share snippets of text, links, or small files. Existing solutions like messaging apps or email can be cumbersome and often lack true privacy for temporary data. This project provides a dead-simple, secure clipboard that works in real-time across any device with a web browser, without requiring accounts or logins.
-
-## ✨ The Solution
-
-This is a web application that provides password-protected "rooms" where users can share text notes and files. It prioritizes security and simplicity, ensuring that your temporary data remains private and is easily accessible only to you and those you share the password with.
+Quickly and privately sharing text or files between devices can be cumbersome. Standard tools like messaging apps are often slow, require logins, and are not built for privacy-focused, temporary data sharing.
 
 ## 🚀 Features
 
-* **End-to-End Encryption**: All content is encrypted in your browser using the Web Crypto API. The server only ever sees encrypted data.
-* **Real-Time Sync**: Changes are instantly pushed to all devices in the same room using WebSockets (Socket.IO).
-* **Password-Protected Rooms**: A room is dynamically created and accessed using a shared password. The password is never sent to the server.
-* **Text & File Support**: Share both multi-line text notes and upload small files.
-* **No Accounts Required**: Access is ephemeral and based solely on the room password.
+This application is a simple, secure, and real-time shared clipboard with the following features:
+
+* **End-to-End Encryption**: All content is encrypted and decrypted directly in your browser. The server never sees your unencrypted data.
+* **Real-Time Sync**: Changes instantly appear on all connected devices using WebSockets.
+* **Password-Protected**: Rooms are secured by a password that is never sent to the server.
+* **Text & File Sharing**: Supports both rich text notes and file uploads.
+* **Account-Free**: No sign-up required for quick, ephemeral use.
 
 ---
 
 ## 🛠️ How It Works
 
-The application uses a modern web stack to achieve its goals:
-
-* **Frontend**: Built with **Next.js** and **React**, it handles all UI rendering and client-side logic.
-* **Backend**: Leverages Next.js API Routes for server-side operations:
-    * A **REST API** (`/api/files`) manages file uploads and deletions.
-    * A **WebSocket API** (`/api/socket`) runs a **Socket.IO** server to handle all real-time communication.
-* **Database**: **MongoDB** is used to store the encrypted content of each clipboard room.
-* **Security**: When you enter a password, two keys are derived in your browser: a public **Room ID** (sent to the server) and a secret **Encryption Key** (which never leaves your browser).
+The app uses a **Next.js** and **React** frontend for the UI and client-side cryptography. The backend consists of Next.js API Routes running a **Socket.IO** server for real-time events and a REST endpoint for file handling. **MongoDB** stores the encrypted data blobs. The browser's native **Web Crypto API** derives a secret key from your password, ensuring all data is encrypted before it leaves your device.
 
 ---
 
@@ -52,7 +43,7 @@ Follow these steps to get the project running on your local machine.
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
+    git clone [https://github.com/parthg2112/clipboard.git](https://github.com/parthg2112/clipboard.git)
     cd your-repo-name
     ```
 
@@ -67,6 +58,12 @@ Follow these steps to get the project running on your local machine.
     ```env
     # .env.local
     MONGODB_URI="your_mongodb_connection_string"
+    CLIPBOARD_DB_NAME="your_database_name"
+
+    SOCKET_PORT=3000
+    NEXT_PUBLIC_SOCKET_PORT=3000
+
+    NEXT_PUBLIC_APP_URL=http://localhost:3000
     ```
     > **Important:** Make sure your MongoDB password in the URI is URL-encoded if it contains special characters (like `@`, `:`, `#`).
 
