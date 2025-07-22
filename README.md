@@ -43,8 +43,8 @@ Follow these steps to get the project running on your local machine.
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/parthg2112/clipboard.git](https://github.com/parthg2112/clipboard.git)
-    cd your-repo-name
+    git clone https://github.com/parthg2112/clipboard.git
+    cd clipboard
     ```
 
 2.  **Install dependencies:**
