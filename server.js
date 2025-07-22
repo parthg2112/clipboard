@@ -2,19 +2,20 @@
 require('dotenv').config({ path: './.env.local' });
 
 const { createServer } = require('http');
+const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 const { MongoClient } = require('mongodb');
 const cron = require('node-cron');
-const fs = require('fs/promises');
+const fs = require('fs');
 const path = require('path');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
-const port = 3000;
+const port = process.env.PORT || 3020;
 
 const app = next({ dev, hostname, port });
-const handler = app.getRequestHandler();
+const handle = app.getRequestHandler();
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.CLIPBOARD_DB_NAME || 'live_clipboard';
@@ -34,7 +35,8 @@ const deleteClipboardData = async (clipboard) => {
         for (const file of clipboard.files) {
             try {
                 const filePath = path.join(process.cwd(), 'public', file.url);
-                await fs.unlink(filePath);
+                // Use fs.promises.unlink for async/await consistency
+                await fs.promises.unlink(filePath);
             } catch (err) {
                 if (err.code !== 'ENOENT') {
                     console.error(`Error deleting file ${file.url}:`, err);
@@ -73,7 +75,36 @@ const cleanupInactiveClipboards = async () => {
 cron.schedule('0 * * * *', cleanupInactiveClipboards);
 
 app.prepare().then(() => {
-    const httpServer = createServer(handler);
+    const httpServer = createServer(async (req, res) => {
+        try {
+            const parsedUrl = parse(req.url, true);
+            const { pathname } = parsedUrl;
+
+            // --- Static File Serving Logic ---
+            // This block checks if the request is for an uploaded file.
+            if (pathname.startsWith('/uploads/')) {
+                const filePath = path.join(process.cwd(), 'public', pathname);
+                fs.stat(filePath, (err, stats) => {
+                    if (err || !stats.isFile()) {
+                        res.statusCode = 404;
+                        res.end('Not Found');
+                        return;
+                    }
+                    res.setHeader('Content-Length', stats.size);
+                    const readStream = fs.createReadStream(filePath);
+                    readStream.pipe(res);
+                });
+            } else {
+                // For all other requests, let Next.js handle it
+                await handle(req, res, parsedUrl);
+            }
+        } catch (err) {
+            console.error('Error handling request', err);
+            res.statusCode = 500;
+            res.end('Internal Server Error');
+        }
+    });
+
     const io = new Server(httpServer, {
         cors: { origin: `http://localhost:${port}`, methods: ['GET', 'POST'] },
     });
@@ -82,7 +113,6 @@ app.prepare().then(() => {
     io.on('connection', (socket) => {
         console.log(`Client connected: ${socket.id}`);
 
-        // --- FIXED: Re-added the missing database connection test ---
         socket.on('test-connection', async () => {
             try {
                 const client = await clientPromise;
