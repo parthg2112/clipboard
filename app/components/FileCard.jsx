@@ -26,7 +26,6 @@ export default function FileCard({ file, encryptionKey, roomId, isConnected, onI
     <>
       <div className="relative group w-44 flex-shrink-0">
         <div className={`bg-gray-900/50 border border-gray-600 rounded-xl p-3 hover:border-white transition-all duration-300 w-full h-40 flex flex-col ${!isConnected ? 'opacity-50' : ''}`}>
-          {/* Top section is now a placeholder for spacing, delete button is absolutely positioned */}
           <div className="h-6 mb-2 flex-shrink-0"></div>
           
           <div className="w-full flex-grow bg-gray-800 rounded-lg mb-2 overflow-hidden flex items-center justify-center">

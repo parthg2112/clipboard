@@ -11,70 +11,51 @@ export default function PasswordScreen({ onSubmit }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (password && !isLoading) {
-      // Example of showing a loading state
       setIsLoading(true);
-      // Pass the password to the parent component's function
       onSubmit(password);
-      // You might want to handle the end of loading state in the parent component
+      // In a real app, you'd likely remove the loading state in the parent
+      // component after the submission logic is complete.
       setTimeout(() => setIsLoading(false), 2000); 
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-black">
-      <div className="relative w-full max-w-md">
-        {/* Main container with glassmorphism styles */}
+    <div className="min-h-screen w-full flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        {/* Main container with a minimal, dark theme */}
         <div 
-          className="rounded-3xl border shadow-2xl overflow-hidden"
-          style={{
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))',
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
-          }}
+          className="rounded-2xl border border-zinc-800 bg-[#111]"
         >
-          <div className="p-8 sm:p-10 text-white">
-            <div className="text-center mb-10">
-              {/* Icon with a decorative glow effect */}
-              <div className="relative inline-block mb-5">
-                <div className="absolute inset-0 bg-cyan-400/20 rounded-full blur-xl"></div>
-                <ShieldCheck className="relative mx-auto h-16 w-16 text-cyan-300 drop-shadow-lg" />
-              </div>
-              <h2 className="text-3xl font-bold text-white mb-3 drop-shadow-lg">Secure Room</h2>
-              <p className="text-white/80 text-sm leading-relaxed">
-                Enter the password to encrypt and access your shared clipboard.
+          <div className="p-6 sm:p-8 text-white">
+            <div className="text-center mb-8">
+              {/* Minimalist Icon */}
+              <ShieldCheck className="mx-auto h-12 w-12 text-zinc-500 mb-4" />
+              
+              <h2 className="text-2xl font-semibold text-zinc-200 mb-2">Secure Room</h2>
+              <p className="text-zinc-500 text-sm">
+                Enter the password to access the clipboard.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Concise and minimal input field */}
               <div className="relative">
-                {/* Styled input field */}
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl px-6 py-4 text-white placeholder-white/60 focus:ring-2 focus:ring-cyan-300/50 focus:outline-none transition-all duration-300 text-base border"
-                  style={{ 
-                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-                    borderColor: 'rgba(255, 255, 255, 0.3)'
-                  }}
-                  placeholder="Enter Room Password"
+                  className="w-full rounded-md px-4 py-3 text-sm bg-zinc-900/50 text-white placeholder-zinc-600 focus:ring-1 focus:ring-white/20 focus:outline-none transition-all duration-300 border border-zinc-700 focus:border-zinc-500"
+                  placeholder="Enter Password"
                 />
               </div>
               
-              {/* Styled button with gradient and hover effect */}
+              {/* Minimalist submit button */}
               <button
                 type="submit"
-                className="relative w-full group overflow-hidden rounded-xl py-4 px-6 font-bold text-base transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50"
-                style={{
-                  background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-                  color: 'white' 
-                }}
+                className="w-full group rounded-md py-3 px-4 bg-white text-black font-semibold text-sm transition-all duration-300 hover:bg-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
                 disabled={!password || isLoading}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <span>{isLoading ? 'Unlocking...' : 'Unlock Clipboard'}</span>
+                <span>{isLoading ? 'Unlocking...' : 'Unlock'}</span>
               </button>
             </form>
           </div>

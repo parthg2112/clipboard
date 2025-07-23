@@ -5,6 +5,9 @@ import Footer from "./footer";
 export const metadata = {
   title: "Live Clipboard",
   description: "End-to-end encrypted live clipboard",
+  icons: {
+    icon: '/icon.png',
+  },
 };
 
 export default function RootLayout({ children }) {

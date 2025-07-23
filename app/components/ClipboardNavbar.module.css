@@ -1,0 +1,69 @@
+/* app/components/ClipboardNavbar.module.css */
+
+.navbar {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem 0;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  z-index: 1000;
+}
+
+.navContainer {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+}
+
+.logo {
+  color: white;
+  font-size: 1.3rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 5rem; /* Increased gap for better spacing */
+}
+
+.navButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  
+  /* All links are now white */
+  color: white; 
+  font-weight: 300;
+  font-size: 1.3rem;
+  text-decoration: none;
+  padding: 0.5rem 0;
+  transition: color 0.3s ease;
+}
+
+/* On hover, links turn a slight cyan color */
+.navButton:hover {
+  color: #78d7e6; /* Tailwind's cyan-400 */
+}
+
+@media (max-width: 768px) {
+  .navContainer {
+    padding: 0 1rem;
+  }
+  .logo {
+    font-size: 1.1rem;
+  }
+  .navActions {
+    gap: 1.5rem;
+  }
+  .navButton {
+    font-size: 1.1rem;
+  }
+}
