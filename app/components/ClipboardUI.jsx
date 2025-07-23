@@ -29,9 +29,20 @@ export default function ClipboardUI({
 
   const MAX_NOTES = 4;
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts and focus handling
   useEffect(() => {
+    // Ensure the container can receive focus for keyboard events
+    const container = document.getElementById('clipboard-container');
+    if (container) {
+      container.focus();
+    }
+
     const handleKeyDown = async (e) => {
+      // Prevent shortcuts when user is typing in input fields
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+      }
+
       // Ctrl+V for pasting images
       if (e.ctrlKey && e.key === 'v') {
         e.preventDefault();
@@ -61,13 +72,47 @@ export default function ClipboardUI({
           }
           
           if (!hasImage) {
-            toast.error('No image data in clipboard. Try taking a screenshot or copying an image directly from a webpage instead of a file.');
+            toast.error('No image data in clipboard. Try taking a screenshot or copying an image directly from a webpage instead of a file from explorer.');
           }
         } catch (error) {
           console.error('Clipboard access error:', error);
           toast.error('Could not access clipboard. Make sure to allow clipboard permissions.');
         }
       }
+
+      // Ctrl+C for copying selected image
+      // if (e.ctrlKey && e.key === 'c' && selectedImageId) {
+      //   e.preventDefault();
+      //   const selectedImage = clipboard.files?.find(file => file.id === selectedImageId);
+      //   if (selectedImage && selectedImage.type?.startsWith('image/')) {
+      //     try {
+      //       // Check if ClipboardItem and write are supported
+      //       if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
+      //         const response = await fetch(selectedImage.url);
+      //         const blob = await response.blob();
+      //         await navigator.clipboard.write([
+      //           new ClipboardItem({
+      //             [blob.type]: blob
+      //           })
+      //         ]);
+      //         toast.success('Image copied to clipboard!');
+      //       } else {
+      //         // Fallback: copy the image URL as text
+      //         await navigator.clipboard.writeText(selectedImage.url);
+      //         toast.success('Image URL copied to clipboard!');
+      //       }
+      //     } catch (error) {
+      //       console.error('Copy error:', error);
+      //       // Final fallback: try copying URL as text
+      //       try {
+      //         await navigator.clipboard.writeText(selectedImage.url);
+      //         toast.success('Image URL copied to clipboard!');
+      //       } catch (fallbackError) {
+      //         toast.error('Copy not supported in this browser');
+      //       }
+      //     }
+      //   }
+      // }
 
       // Delete key for removing selected image
       if (e.key === 'Delete' && selectedImageId) {
@@ -79,8 +124,25 @@ export default function ClipboardUI({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    // Add event listener to document for global keyboard shortcuts
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Focus the container when component mounts
+    const focusContainer = () => {
+      const container = document.getElementById('clipboard-container');
+      if (container) {
+        container.focus();
+      }
+    };
+
+    // Focus immediately and on window focus
+    focusContainer();
+    window.addEventListener('focus', focusContainer);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('focus', focusContainer);
+    };
   }, [isConnected, clipboard.files, selectedImageId, roomId]);
 
   // Handle image deletion
@@ -195,9 +257,15 @@ export default function ClipboardUI({
         onLogout={onLogout}
       />
       
-      <div {...getRootProps()} className="flex flex-col min-h-screen w-full outline-none bg-black" style={{ paddingTop: '88px' }}>
+      <div 
+        id="clipboard-container"
+        {...getRootProps()} 
+        className="flex flex-col min-h-screen w-full outline-none" 
+        style={{ paddingTop: '88px', paddingLeft: '10px', paddingRight: '10px' }}
+        tabIndex={0}
+      >
         {isDragActive && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-md border-4 border-dashed border-cyan-400 rounded-3xl" style={{ zIndex: 10000 }}>
+          <div className="fixed inset-0 flex items-center justify-center bg-opacity-70 backdrop-blur-md border-4 border-dashed border-cyan-400 rounded-3xl" style={{ zIndex: 10000 }}>
             <div className="text-center">
               <UploadCloud size={64} className="mx-auto text-cyan-300 animate-bounce" />
               <p className="mt-4 text-2xl font-bold text-white">Drop files to upload</p>
@@ -226,11 +294,11 @@ export default function ClipboardUI({
 
         <div className="main-container flex-shrink-0 py-6 mt-auto">
           <h2 className="text-xl font-semibold text-gray-200 mb-6 tracking-wider">Files</h2>
-          <div className="flex items-center gap-6 pb-4 overflow-x-auto">
+          <div className="flex items-center gap-6 pb-4 overflow-x-auto px-1 pt-1">
             {clipboard.files?.map((file) => (
               <div 
                 key={file.id}
-                className={`${selectedImageId === file.id && file.type?.startsWith('image/') ? 'ring-2 ring-cyan-400 rounded-xl' : ''}`}
+                className={`flex-shrink-0 ${selectedImageId === file.id && file.type?.startsWith('image/') ? 'ring-2 ring-cyan-400 rounded-xl' : ''}`}
                 onClick={() => file.type?.startsWith('image/') && setSelectedImageId(file.id)}
               >
                 <FileCard 
@@ -244,7 +312,7 @@ export default function ClipboardUI({
             ))}
             {clipboard.files?.length < 8 && (
               <label className={`cursor-pointer flex-shrink-0 ${!isConnected ? 'cursor-not-allowed' : ''}`}>
-                <div className={`bg-black border-2 border-dashed border-white/20 rounded-xl p-4 hover:border-white transition-all duration-300 w-44 h-40 flex items-center justify-center ${!isConnected ? 'opacity-50' : ''} group`}>
+                <div className={`border-2 border-dashed border-white/20 rounded-xl p-4 hover:border-white transition-all duration-300 w-44 h-40 flex items-center justify-center ${!isConnected ? 'opacity-50' : ''} group`}>
                   <Plus size={28} className="text-gray-500 group-hover:text-white transition-colors duration-200" />
                 </div>
                 <input type="file" className="hidden" multiple onChange={(e) => Array.from(e.target.files).forEach(handleFileUpload)} disabled={!isConnected} />
