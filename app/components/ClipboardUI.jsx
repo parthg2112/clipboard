@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -22,11 +22,90 @@ export default function ClipboardUI({
 }) {
   const [lightboxImage, setLightboxImage] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedImageId, setSelectedImageId] = useState(null);
 
   const isConnected = connectionStatus.socket === 'connected';
   const noteCount = clipboard.textNotes?.length || 0;
 
   const MAX_NOTES = 4;
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = async (e) => {
+      // Ctrl+V for pasting images
+      if (e.ctrlKey && e.key === 'v') {
+        e.preventDefault();
+        if (!isConnected) {
+          toast.error("Cannot paste: not connected.");
+          return;
+        }
+        if (clipboard.files.length >= 8) {
+          toast.error('Maximum 8 files allowed.');
+          return;
+        }
+
+        try {
+          const clipboardItems = await navigator.clipboard.read();
+          let hasImage = false;
+          
+          for (const clipboardItem of clipboardItems) {
+            for (const type of clipboardItem.types) {
+              if (type.startsWith('image/')) {
+                const blob = await clipboardItem.getType(type);
+                const file = new File([blob], `pasted-image-${Date.now()}.png`, { type });
+                handleFileUpload(file);
+                hasImage = true;
+                return;
+              }
+            }
+          }
+          
+          if (!hasImage) {
+            toast.error('No image data in clipboard. Try taking a screenshot or copying an image directly from a webpage instead of a file.');
+          }
+        } catch (error) {
+          console.error('Clipboard access error:', error);
+          toast.error('Could not access clipboard. Make sure to allow clipboard permissions.');
+        }
+      }
+
+      // Delete key for removing selected image
+      if (e.key === 'Delete' && selectedImageId) {
+        e.preventDefault();
+        const selectedImage = clipboard.files?.find(file => file.id === selectedImageId);
+        if (selectedImage && selectedImage.type?.startsWith('image/')) {
+          handleDeleteImage(selectedImageId);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isConnected, clipboard.files, selectedImageId, roomId]);
+
+  // Handle image deletion
+  const handleDeleteImage = async (imageId) => {
+    if (!isConnected) {
+      toast.error("Cannot delete: not connected.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/files?roomId=${roomId}&fileId=${imageId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Delete failed');
+      }
+      
+      toast.success('Image deleted');
+      setSelectedImageId(null);
+    } catch (error) {
+      toast.error(`Delete failed: ${error.message}`);
+    }
+  };
 
   const addTextNote = async () => {
     if (!isConnected) return toast.error("Cannot add note: not connected.");
@@ -102,6 +181,11 @@ export default function ClipboardUI({
     setIsDeleteModalOpen(false);
   };
 
+  const handleImageClick = (imageUrl, imageId) => {
+    setLightboxImage(imageUrl);
+    setSelectedImageId(imageId);
+  };
+
   return (
     <>
       <ClipboardNavbar
@@ -144,7 +228,19 @@ export default function ClipboardUI({
           <h2 className="text-xl font-semibold text-gray-200 mb-6 tracking-wider">Files</h2>
           <div className="flex items-center gap-6 pb-4 overflow-x-auto">
             {clipboard.files?.map((file) => (
-              <FileCard key={file.id} file={file} encryptionKey={encryptionKey} roomId={roomId} isConnected={isConnected} onImageClick={() => file.type?.startsWith('image/') && setLightboxImage(file.url)} />
+              <div 
+                key={file.id}
+                className={`${selectedImageId === file.id && file.type?.startsWith('image/') ? 'ring-2 ring-cyan-400 rounded-xl' : ''}`}
+                onClick={() => file.type?.startsWith('image/') && setSelectedImageId(file.id)}
+              >
+                <FileCard 
+                  file={file} 
+                  encryptionKey={encryptionKey} 
+                  roomId={roomId} 
+                  isConnected={isConnected} 
+                  onImageClick={() => handleImageClick(file.url, file.id)} 
+                />
+              </div>
             ))}
             {clipboard.files?.length < 8 && (
               <label className={`cursor-pointer flex-shrink-0 ${!isConnected ? 'cursor-not-allowed' : ''}`}>
