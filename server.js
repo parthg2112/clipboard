@@ -126,7 +126,7 @@ app.prepare().then(() => {
                 const client = await clientPromise;
                 const db = client.db(DB_NAME);
                 const clipboard = await db.collection('clipboards').findOne({ _id: roomId });
-                
+
                 if (clipboard) {
                     await deleteClipboardData(clipboard);
                     io.to(roomId).emit('room-deleted');
@@ -137,7 +137,7 @@ app.prepare().then(() => {
         });
 
         const updateRoomTimestamp = async (roomId) => {
-             try {
+            try {
                 const client = await clientPromise;
                 await client.db(DB_NAME).collection('clipboards').updateOne(
                     { _id: roomId },
@@ -155,7 +155,23 @@ app.prepare().then(() => {
                 let room = await db.collection('clipboards').findOne({ _id: roomId });
 
                 if (!room) {
-                    room = { _id: roomId, passwordHash, textNotes: [], files: [], createdAt: new Date(), lastUpdated: new Date() };
+                    // ✅ Create a default note when a new room is made
+                    const initialNote = {
+                        id: Date.now().toString(),
+                        // We intentionally leave `content` undefined. 
+                        // The client will see this and default to an empty, editable note.
+                        createdAt: new Date(),
+                        updatedAt: new Date()
+                    };
+
+                    room = {
+                        _id: roomId,
+                        passwordHash,
+                        textNotes: [initialNote], // Add the new note here
+                        files: [],
+                        createdAt: new Date(),
+                        lastUpdated: new Date()
+                    };
                     await db.collection('clipboards').insertOne(room);
                 } else {
                     if (room.passwordHash && room.passwordHash !== passwordHash) {
@@ -173,7 +189,7 @@ app.prepare().then(() => {
                 socket.emit('authentication-failed', { message: 'Server error during authentication.' });
             }
         });
-        
+
         socket.on('add-note', async ({ roomId, note }) => {
             if (socket.roomId !== roomId) return;
             const client = await clientPromise;
@@ -190,7 +206,7 @@ app.prepare().then(() => {
             await db.collection('clipboards').updateOne({ _id: roomId }, { $push: { textNotes: noteWithTimestamp }, $set: { lastUpdated: new Date() } });
             io.to(roomId).emit('note-added', noteWithTimestamp);
         });
-    
+
         socket.on('update-note', async ({ roomId, noteId, encryptedContent }) => {
             if (socket.roomId !== roomId) return;
             const client = await clientPromise;
