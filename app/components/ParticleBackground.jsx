@@ -1,74 +1,74 @@
+// app/components/ParticleBackground.jsx
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
-const MatrixParticleBackground = () => {
+export default function ParticleBackground() {
+  const canvasRef = useRef(null);
+
   useEffect(() => {
-    const container = document.getElementById('particle-container');
-    if (!container) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
 
-    container.innerHTML = '';
+    let animationFrameId;
 
-    // Characters to randomly select from (alphanumeric + some special chars)
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+    // Set canvas dimensions and handle resizing
+    const setupCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
     
-    // Calculate grid dimensions based on viewport
-    const charWidth = 20; // Width of each character column
-    const charHeight = 25; // Height of each character row
-    const columns = Math.floor(window.innerWidth / charWidth);
-    const rows = Math.floor(window.innerHeight / charHeight);
+    window.addEventListener('resize', setupCanvas);
+    setupCanvas();
+
+    // --- Animation Logic ---
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const fontSize = 16;
+    const columns = Math.floor(canvas.width / fontSize);
     
-    // Create columns for the rain effect
-    for (let col = 0; col < columns; col++) {
-      const columnDiv = document.createElement('div');
-      columnDiv.classList.add('matrix-column');
-      columnDiv.style.left = `${col * charWidth}px`;
-      
-      // Random number of characters per column (10-25)
-      const numChars = Math.floor(Math.random() * 15) + 10;
-      
-      for (let row = 0; row < numChars; row++) {
-        const char = document.createElement('div');
-        char.classList.add('matrix-char');
-        char.textContent = characters[Math.floor(Math.random() * characters.length)];
-        
-        // Position character
-        char.style.top = `${row * charHeight}px`;
-        
-        // Random animation delay for staggered effect
-        char.style.animationDelay = `${Math.random() * 5}s`;
-        
-        // Random animation duration for varied speeds
-        const duration = Math.random() * 3 + 2; // 2-5 seconds
-        char.style.animationDuration = `${duration}s`;
-        
-        // Add brightness variation
-        const brightness = Math.random() * 0.7 + 0.3; // 0.3-1.0
-        char.style.opacity = brightness;
-        
-        columnDiv.appendChild(char);
-      }
-      
-      container.appendChild(columnDiv);
+    const drops = [];
+    for (let i = 0; i < columns; i++) {
+      drops[i] = 1;
     }
 
-    // Character change interval
-    const changeInterval = setInterval(() => {
-      const chars = document.querySelectorAll('.matrix-char');
-      chars.forEach(char => {
-        if (Math.random() < 0.1) { // 10% chance to change each character
-          char.textContent = characters[Math.floor(Math.random() * characters.length)];
-        }
-      });
-    }, 100);
+    const draw = () => {
+      // CHANGE 1: Increase alpha from 0.05 to 0.1. This makes the trails
+      // fade faster, resulting in a "slower" and less cluttered visual effect.
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Cleanup function
+      // CHANGE 2: Set the color to a white shade with 70% opacity.
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = `${fontSize}px monospace`;
+
+      // 3. Loop through each column to draw the characters
+      for (let i = 0; i < columns; i++) {
+        const text = characters.charAt(Math.floor(Math.random() * characters.length));
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+
+        drops[i]++;
+      }
+    };
+
+    // --- Start the animation loop ---
+    const animate = () => {
+      draw();
+      animationFrameId = window.requestAnimationFrame(animate);
+    };
+    
+    animate();
+
+    // --- Cleanup function ---
     return () => {
-      clearInterval(changeInterval);
+      window.removeEventListener('resize', setupCanvas);
+      window.cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
-  return <div id="particle-container"></div>;
-};
-
-export default MatrixParticleBackground;
+  return <canvas ref={canvasRef} id="particle-container" />;
+}
