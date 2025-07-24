@@ -5,7 +5,7 @@ import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus, UploadCloud } from 'lucide-react';
-import { encrypt } from '../lib/crypto';
+import { encrypt, encryptFile } from '../lib/crypto'
 import TextNote from './TextNote';
 import FileCard from './FileCard';
 import Lightbox from './Lightbox';
@@ -198,13 +198,26 @@ export default function ClipboardUI({
       toast.error('Maximum 8 files allowed.');
       return;
     }
-    const toastId = toast.loading(`Uploading ${file.name}...`);
+    const toastId = toast.loading(`Encrypting & uploading ${file.name}...`);
     try {
+      // 1. Encrypt the filename (as before)
       const encryptedName = await encrypt(file.name, encryptionKey);
+
+      // 2. ✅ Encrypt the file content
+      const fileBuffer = await file.arrayBuffer();
+      const encryptedBlob = await encryptFile(fileBuffer, encryptionKey);
+      
+      // 3. Create a new File object with the encrypted content
+      const encryptedFile = new File([encryptedBlob], file.name, { type: 'application/octet-stream' });
+
+      // 4. Upload the encrypted file
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', encryptedFile); // Send the encrypted file
       formData.append('roomId', roomId);
       formData.append('encryptedName', encryptedName);
+      // We still send the original file type for the icon display
+      formData.append('originalType', file.type); 
+
       const response = await fetch('/api/files', { method: 'POST', body: formData });
       if (!response.ok) {
         const errorData = await response.json();
@@ -212,6 +225,7 @@ export default function ClipboardUI({
       }
       toast.success(`${file.name} uploaded!`, { id: toastId });
     } catch (error) {
+      console.error("Upload error:", error);
       toast.error(`Upload failed: ${error.message}`, { id: toastId });
     }
   };

@@ -34,9 +34,11 @@ const checkRateLimit = (roomId) => {
 export async function POST(req) {
   try {
     const formData = await req.formData();
+    
     const roomId = formData.get('roomId');
     const encryptedName = formData.get('encryptedName');
     const file = formData.get('file');
+    const originalType = formData.get('originalType');
 
     if (!roomId || !encryptedName || !file) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -62,17 +64,17 @@ export async function POST(req) {
       id: uuidv4(),
       name: encryptedName,
       url: `/uploads/${uniqueFilename}`,
-      type: file.type,
-      size: file.size,
-      createdAt: new Date(),
+      type: originalType, // Use the original type here
+      size: file.size, // This will be the size of the encrypted file
+      createdAt: Date.now(),
     };
 
     const client = await clientPromise;
     const db = client.db(DB_NAME);
-    
+
     await db.collection('clipboards').updateOne(
       { _id: roomId },
-      { 
+      {
         $push: { files: newFile },
         $set: { lastUpdated: new Date() }, // Crucially, update the timestamp
       },
@@ -92,48 +94,48 @@ export async function POST(req) {
 }
 
 export async function DELETE(req) {
-    try {
-        const { searchParams } = new URL(req.url);
-        const roomId = searchParams.get('roomId');
-        const fileId = searchParams.get('fileId');
+  try {
+    const { searchParams } = new URL(req.url);
+    const roomId = searchParams.get('roomId');
+    const fileId = searchParams.get('fileId');
 
-        if (!roomId || !fileId) {
-            return NextResponse.json({ error: 'Missing roomId or fileId' }, { status: 400 });
-        }
-
-        const client = await clientPromise;
-        const db = client.db(DB_NAME);
-
-        const clipboard = await db.collection('clipboards').findOne(
-            { _id: roomId },
-            { projection: { files: { $elemMatch: { id: fileId } } } }
-        );
-
-        if (clipboard?.files?.length > 0) {
-            const fileToDelete = clipboard.files[0];
-            try {
-                const filePath = path.join(process.cwd(), 'public', fileToDelete.url);
-                await fs.unlink(filePath);
-            } catch (fsError) {
-                console.error('Could not delete file from filesystem (it may already be gone):', fsError.message);
-            }
-        }
-
-        await db.collection('clipboards').updateOne(
-            { _id: roomId },
-            { 
-                $pull: { files: { id: fileId } },
-                $set: { lastUpdated: new Date() } // Also update timestamp on delete
-            }
-        );
-
-        if (global.io) {
-            global.io.to(roomId).emit('file-deleted', fileId);
-        }
-
-        return NextResponse.json({ success: true, message: 'File deleted successfully' });
-    } catch (error) {
-        console.error('File deletion error:', error);
-        return NextResponse.json({ error: 'Error deleting file' }, { status: 500 });
+    if (!roomId || !fileId) {
+      return NextResponse.json({ error: 'Missing roomId or fileId' }, { status: 400 });
     }
+
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+
+    const clipboard = await db.collection('clipboards').findOne(
+      { _id: roomId },
+      { projection: { files: { $elemMatch: { id: fileId } } } }
+    );
+
+    if (clipboard?.files?.length > 0) {
+      const fileToDelete = clipboard.files[0];
+      try {
+        const filePath = path.join(process.cwd(), 'public', fileToDelete.url);
+        await fs.unlink(filePath);
+      } catch (fsError) {
+        console.error('Could not delete file from filesystem (it may already be gone):', fsError.message);
+      }
+    }
+
+    await db.collection('clipboards').updateOne(
+      { _id: roomId },
+      {
+        $pull: { files: { id: fileId } },
+        $set: { lastUpdated: new Date() } // Also update timestamp on delete
+      }
+    );
+
+    if (global.io) {
+      global.io.to(roomId).emit('file-deleted', fileId);
+    }
+
+    return NextResponse.json({ success: true, message: 'File deleted successfully' });
+  } catch (error) {
+    console.error('File deletion error:', error);
+    return NextResponse.json({ error: 'Error deleting file' }, { status: 500 });
+  }
 }
