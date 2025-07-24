@@ -26,6 +26,7 @@ const clientPromise = new MongoClient(MONGODB_URI).connect();
 console.log('MongoDB client configured.');
 
 const deleteClipboardData = async (clipboard) => {
+    // ... (this function remains the same)
     if (!clipboard) return;
     const client = await clientPromise;
     const db = client.db(DB_NAME);
@@ -46,31 +47,37 @@ const deleteClipboardData = async (clipboard) => {
     console.log(`Deleted clipboard for room ${clipboard._id}`);
 };
 
-const cleanupInactiveClipboards = async () => {
-    console.log('Running cleanup job for inactive clipboards...');
+// UPDATED: Cron job now checks for the 'expiresAt' field
+const cleanupExpiredClipboards = async () => {
+    console.log('Running cleanup job for expired clipboards...');
     try {
         const client = await clientPromise;
         const db = client.db(DB_NAME);
-        const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
-
-        const inactiveClipboards = await db.collection('clipboards').find({
-            lastUpdated: { $lt: oneHourAgo }
+        
+        // Find documents where the expiresAt date is in the past
+        const expiredClipboards = await db.collection('clipboards').find({
+            expiresAt: { $lt: new Date() }
         }).toArray();
 
-        if (inactiveClipboards.length > 0) {
-            for (const clipboard of inactiveClipboards) {
+        if (expiredClipboards.length > 0) {
+            console.log(`Found ${expiredClipboards.length} expired clipboards to delete.`);
+            for (const clipboard of expiredClipboards) {
                 await deleteClipboardData(clipboard);
             }
+        } else {
+            console.log('No expired clipboards found.');
         }
     } catch (error) {
         console.error('Error during clipboard cleanup job:', error);
     }
 };
 
-cron.schedule('0 * * * *', cleanupInactiveClipboards);
+// Run every hour
+cron.schedule('0 * * * *', cleanupExpiredClipboards);
 
 app.prepare().then(() => {
     const httpServer = createServer(async (req, res) => {
+        // ... (httpServer logic remains the same)
         try {
             const parsedUrl = parse(req.url, true);
             const { pathname } = parsedUrl;
@@ -103,6 +110,7 @@ app.prepare().then(() => {
     global.io = io;
 
     io.on('connection', (socket) => {
+        // ... ('test-connection' and 'delete-room' listeners remain the same)
         socket.on('test-connection', async () => {
             try {
                 const client = await clientPromise;
@@ -136,49 +144,42 @@ app.prepare().then(() => {
             }
         });
 
-        const updateRoomTimestamp = async (roomId) => {
-            try {
-                const client = await clientPromise;
-                await client.db(DB_NAME).collection('clipboards').updateOne(
-                    { _id: roomId },
-                    { $set: { lastUpdated: new Date() } }
-                );
-            } catch (error) {
-                console.error(`Failed to update timestamp for room ${roomId}:`, error);
-            }
-        };
+        // REMOVED: updateRoomTimestamp function is no longer needed
 
-        socket.on('authenticate-room', async ({ roomId, passwordHash }) => {
+        // UPDATED: 'authenticate-room' now accepts 'expiration'
+        socket.on('authenticate-room', async ({ roomId, passwordHash, expiration }) => {
             try {
                 const client = await clientPromise;
                 const db = client.db(DB_NAME);
                 let room = await db.collection('clipboards').findOne({ _id: roomId });
 
                 if (!room) {
-                    // ✅ Create a default note when a new room is made
                     const initialNote = {
                         id: Date.now().toString(),
-                        // We intentionally leave `content` undefined. 
-                        // The client will see this and default to an empty, editable note.
                         createdAt: new Date(),
                         updatedAt: new Date()
                     };
 
+                    // Calculate the expiration date
+                    const expiresAt = new Date(Date.now() + expiration);
+
                     room = {
                         _id: roomId,
                         passwordHash,
-                        textNotes: [initialNote], // Add the new note here
+                        textNotes: [initialNote],
                         files: [],
                         createdAt: new Date(),
-                        lastUpdated: new Date()
+                        expiresAt: expiresAt // Store the expiration date
                     };
                     await db.collection('clipboards').insertOne(room);
+                    console.log(`New room created for ${roomId} with expiration at ${expiresAt.toLocaleString()}`);
+
                 } else {
                     if (room.passwordHash && room.passwordHash !== passwordHash) {
                         socket.emit('authentication-failed', { message: 'Invalid password.' });
                         return;
                     }
-                    await updateRoomTimestamp(roomId);
+                    // No need to update timestamp anymore
                 }
 
                 socket.join(roomId);
@@ -186,16 +187,17 @@ app.prepare().then(() => {
                 socket.emit('authentication-success');
                 socket.emit('room-data', { textNotes: room.textNotes || [], files: room.files || [] });
             } catch (error) {
+                console.error('Auth error:', error);
                 socket.emit('authentication-failed', { message: 'Server error during authentication.' });
             }
         });
 
+        // UPDATED: Note and file listeners now only update the content, not the room's lastUpdated time
         socket.on('add-note', async ({ roomId, note }) => {
             if (socket.roomId !== roomId) return;
             const client = await clientPromise;
             const db = client.db(DB_NAME);
 
-            // UPDATED: Server-side check for new 4-note limit
             const room = await db.collection('clipboards').findOne({ _id: roomId }, { projection: { textNotes: 1 } });
             if (room && room.textNotes && room.textNotes.length >= 4) {
                 socket.emit('error', { message: 'Maximum 4 text notes allowed.' });
@@ -203,7 +205,7 @@ app.prepare().then(() => {
             }
 
             const noteWithTimestamp = { ...note, createdAt: new Date(), updatedAt: new Date() };
-            await db.collection('clipboards').updateOne({ _id: roomId }, { $push: { textNotes: noteWithTimestamp }, $set: { lastUpdated: new Date() } });
+            await db.collection('clipboards').updateOne({ _id: roomId }, { $push: { textNotes: noteWithTimestamp } });
             io.to(roomId).emit('note-added', noteWithTimestamp);
         });
 
@@ -213,7 +215,7 @@ app.prepare().then(() => {
             const db = client.db(DB_NAME);
             await db.collection('clipboards').updateOne(
                 { _id: roomId, 'textNotes.id': noteId },
-                { $set: { 'textNotes.$.content': encryptedContent, 'textNotes.$.updatedAt': new Date(), lastUpdated: new Date() } }
+                { $set: { 'textNotes.$.content': encryptedContent, 'textNotes.$.updatedAt': new Date() } }
             );
             socket.to(roomId).emit('note-updated', { noteId, encryptedContent });
         });
@@ -222,13 +224,14 @@ app.prepare().then(() => {
             if (socket.roomId !== roomId) return;
             const client = await clientPromise;
             const db = client.db(DB_NAME);
-            await db.collection('clipboards').updateOne({ _id: roomId }, { $pull: { textNotes: { id: noteId } }, $set: { lastUpdated: new Date() } });
+            await db.collection('clipboards').updateOne({ _id: roomId }, { $pull: { textNotes: { id: noteId } } });
             io.to(roomId).emit('note-deleted', noteId);
         });
     });
 
     httpServer.listen(port, () => {
         console.log(`> Ready on http://${hostname}:${port}`);
-        cleanupInactiveClipboards();
+        // Run cleanup on startup
+        cleanupExpiredClipboards();
     });
 });

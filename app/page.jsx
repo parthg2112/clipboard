@@ -20,10 +20,11 @@ export default function HomePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const socketConnection = io({
-      transports: ['websocket'],
-    });
+    // ... (socket connection logic remains the same)
+    const socketConnection = io({ transports: ['websocket'] });
+    // ... (all socket listeners remain the same)
 
+    // --- PASTE YOUR EXISTING useEffect LISTENERS HERE ---
     socketConnection.on('connect', () => {
       setSocket(socketConnection);
       toast.success('Connected!');
@@ -55,12 +56,11 @@ export default function HomePage() {
       setIsAuthenticated(true);
       setIsDataLoading(false);
     });
-    // --- ADDED: Listen for the room deletion event ---
+    
     socketConnection.on('room-deleted', () => {
       toast.error('This room has been permanently deleted.', {
         duration: 5000,
       });
-      // Force a reload to send the user back to the password screen
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -100,13 +100,19 @@ export default function HomePage() {
       setClipboard(prev => ({ ...prev, files: prev.files.filter(f => f.id !== fileId) }));
     });
 
+
     return () => {
       socketConnection.disconnect();
     };
   }, []);
 
-  const handlePasswordSubmit = async (password) => {
-    if (!password) return;
+  // Updated to accept 'expiration'
+  const handlePasswordSubmit = async (password, expiration) => {
+    // Password length check is now handled in PasswordScreen, but we can keep a fallback.
+    if (!password || password.length < 6) {
+      toast.error('Password must be at least 6 characters long.');
+      return;
+    }
     setIsDataLoading(true);
     const loadingToast = toast.loading('Encrypting and joining room...');
 
@@ -119,7 +125,12 @@ export default function HomePage() {
       setEncryptionKey(key);
 
       if (socket && socket.connected) {
-        socket.emit('authenticate-room', { roomId: derivedRoomId, passwordHash });
+        // Send the expiration value to the server
+        socket.emit('authenticate-room', { 
+          roomId: derivedRoomId, 
+          passwordHash,
+          expiration // Pass the expiration in milliseconds
+        });
       } else {
         toast.error('Connection not ready. Please wait.', { id: loadingToast });
         setIsDataLoading(false);
