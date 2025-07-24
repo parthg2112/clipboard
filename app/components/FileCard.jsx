@@ -13,11 +13,46 @@ export default function FileCard({ file, encryptionKey, roomId, isConnected, onI
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    // ... decryptName logic remains the same
+    const decryptName = async () => {
+      if (file.name && encryptionKey) {
+        try {
+          const name = await decrypt(file.name, encryptionKey);
+          setDecryptedName(name);
+        } catch (error) {
+          console.error("Decryption failed for file name", error);
+          setDecryptedName('Decryption Failed');
+        }
+      }
+    };
+    decryptName();
   }, [file.name, encryptionKey]);
 
   const handleDeleteConfirm = async () => {
-    // ... handleDeleteConfirm logic remains the same
+    if (!isConnected) {
+      toast.error("Cannot delete: not connected.");
+      return;
+    }
+    
+    setIsDeleting(true);
+    setIsModalOpen(false);
+    const toastId = toast.loading('Deleting file...');
+
+    try {
+      const response = await fetch(`/api/files?roomId=${roomId}&fileId=${file.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Delete failed');
+      }
+
+      toast.success('File deleted', { id: toastId });
+    } catch (error) {
+      toast.error(`Delete failed: ${error.message}`, { id: toastId });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const isImage = file.type?.startsWith('image/');
@@ -31,16 +66,18 @@ export default function FileCard({ file, encryptionKey, roomId, isConnected, onI
           <div className="w-full flex-grow bg-gray-800 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
             {isImage ? <img src={file.url} alt={decryptedName} className="w-full h-full object-cover" /> : <FileIcon className="h-8 w-8 text-slate-500" />}
           </div>
-          <p className="text-xs text-gray-400 truncate">{decryptedName}</p>
-          <div className="text-xs text-gray-600 mt-1">{file.size ? formatFileSize(file.size) : ''}</div>
+
+          {/* FIX: Wrapped name and size in a div to prevent layout issues */}
+          <div>
+            <p className="text-xs text-gray-400 truncate">{decryptedName}</p>
+            <div className="text-xs text-gray-600">{file.size ? formatFileSize(file.size) : ''}</div>
+          </div>
         </div>
 
-        {/* Delete button positioned on top of everything */}
         <button onClick={() => setIsModalOpen(true)} disabled={!isConnected || isDeleting} className="absolute top-2 right-2 z-20 text-gray-500 hover:text-red-400 bg-gray-900/50 p-1 rounded-full transition-all duration-200 disabled:opacity-30">
           {isDeleting ? <Loader size={14} className="animate-spin" /> : <X size={14} />}
         </button>
 
-        {/* Overlay for download/preview */}
         <div className="absolute inset-0 z-10 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl flex items-center justify-center gap-4">
           {isImage && (
             <button onClick={onImageClick} className="p-3 rounded-full bg-black/60 backdrop-blur-sm text-slate-200 hover:text-cyan-300 transition-colors">

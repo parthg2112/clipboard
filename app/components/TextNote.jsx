@@ -1,3 +1,4 @@
+// components/TextNote.jsx
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -63,6 +64,7 @@ export default function TextNote({ note, roomId, encryptionKey, socket, isConnec
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={`relative group h-full ${className}`}
       >
+        {/* FIX: Styles for this div are restored to their original values */}
         <div className="bg-black border border-white rounded-xl p-6 h-full transition-all duration-300 flex flex-col shadow-[0_0_15px_rgba(255,255,255,0.3)] hover:shadow-[0_0_25px_rgba(255,255,255,0.5)]">
           <div className="flex justify-between items-center mb-5 flex-shrink-0">
             <div className="flex items-center gap-3">
@@ -71,7 +73,8 @@ export default function TextNote({ note, roomId, encryptionKey, socket, isConnec
               </div>
               {isSaving && <Loader size={16} className="text-blue-400 animate-spin" />}
             </div>
-            <button onClick={() => setIsModalOpen(true)} disabled={!isConnected} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all duration-200 disabled:opacity-30 p-2 rounded-md hover:bg-white/5">
+            {/* FIX: Removed only `opacity-0` and `group-hover:opacity-100` to make button visible on mobile */}
+            <button onClick={() => setIsModalOpen(true)} disabled={!isConnected} className="text-gray-500 hover:text-red-400 transition-all duration-200 disabled:opacity-30 p-2 rounded-md hover:bg-white/5">
               <X size={16} />
             </button>
           </div>
