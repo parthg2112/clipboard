@@ -19,7 +19,8 @@
 
 # production
 /build
-/public/uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
 
 # misc
 .DS_Store
