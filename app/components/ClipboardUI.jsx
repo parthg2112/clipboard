@@ -58,7 +58,7 @@ export default function ClipboardUI({
         try {
           const clipboardItems = await navigator.clipboard.read();
           let hasImage = false;
-          
+
           for (const clipboardItem of clipboardItems) {
             for (const type of clipboardItem.types) {
               if (type.startsWith('image/')) {
@@ -70,7 +70,7 @@ export default function ClipboardUI({
               }
             }
           }
-          
+
           if (!hasImage) {
             toast.error('No image data in clipboard. Try taking a screenshot or copying an image directly from a webpage instead of a file from explorer.');
           }
@@ -126,7 +126,7 @@ export default function ClipboardUI({
 
     // Add event listener to document for global keyboard shortcuts
     document.addEventListener('keydown', handleKeyDown);
-    
+
     // Focus the container when component mounts
     const focusContainer = () => {
       const container = document.getElementById('clipboard-container');
@@ -156,12 +156,12 @@ export default function ClipboardUI({
       const response = await fetch(`/api/files?roomId=${roomId}&fileId=${imageId}`, {
         method: 'DELETE'
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Delete failed');
       }
-      
+
       toast.success('Image deleted');
       setSelectedImageId(null);
     } catch (error) {
@@ -180,7 +180,7 @@ export default function ClipboardUI({
       const notesToAdd = noteCount >= 2 ? 2 : 1;
       const remainingSlots = MAX_NOTES - noteCount;
       const actualNotesToAdd = Math.min(notesToAdd, remainingSlots);
-      
+
       for (let i = 0; i < actualNotesToAdd; i++) {
         const newNote = { id: (Date.now() + i).toString(), content: '' };
         const encryptedContent = await encrypt('', encryptionKey);
@@ -198,6 +198,13 @@ export default function ClipboardUI({
       toast.error('Maximum 8 files allowed.');
       return;
     }
+
+    const MAX_FILE_SIZE = 100 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`File too large. Maximum allowed size is 100MB`);
+      return;
+    }
+
     const toastId = toast.loading(`Encrypting & uploading ${file.name}...`);
     try {
       // 1. Encrypt the filename (as before)
@@ -206,7 +213,7 @@ export default function ClipboardUI({
       // 2. ✅ Encrypt the file content
       const fileBuffer = await file.arrayBuffer();
       const encryptedBlob = await encryptFile(fileBuffer, encryptionKey);
-      
+
       // 3. Create a new File object with the encrypted content
       const encryptedFile = new File([encryptedBlob], file.name, { type: 'application/octet-stream' });
 
@@ -216,7 +223,7 @@ export default function ClipboardUI({
       formData.append('roomId', roomId);
       formData.append('encryptedName', encryptedName);
       // We still send the original file type for the icon display
-      formData.append('originalType', file.type); 
+      formData.append('originalType', file.type);
 
       const response = await fetch('/api/files', { method: 'POST', body: formData });
       if (!response.ok) {
@@ -246,19 +253,19 @@ export default function ClipboardUI({
     navigator.clipboard.writeText(window.location.href);
     toast.success('Room URL copied to clipboard!');
   };
-  
+
   const handleDeleteRoomConfirm = () => {
     if (socket && isConnected) {
-        toast.loading('Deleting room...');
-        socket.emit('delete-room', { roomId });
+      toast.loading('Deleting room...');
+      socket.emit('delete-room', { roomId });
     } else {
-        toast.error('Cannot delete room: not connected.');
+      toast.error('Cannot delete room: not connected.');
     }
     setIsDeleteModalOpen(false);
   };
 
-  const handleImageClick = (imageUrl, imageId) => {
-    setLightboxImage(imageUrl);
+  const handleImageClick = (decryptedUrl, imageId) => {
+    setLightboxImage(decryptedUrl);
     setSelectedImageId(imageId);
   };
 
@@ -270,11 +277,11 @@ export default function ClipboardUI({
         onDeleteRoom={() => setIsDeleteModalOpen(true)}
         onLogout={onLogout}
       />
-      
-      <div 
+
+      <div
         id="clipboard-container"
-        {...getRootProps()} 
-        className="flex flex-col min-h-screen w-full outline-none" 
+        {...getRootProps()}
+        className="flex flex-col min-h-screen w-full outline-none"
         style={{ paddingTop: '88px', paddingLeft: '10px', paddingRight: '10px' }}
         tabIndex={0}
       >
@@ -290,15 +297,15 @@ export default function ClipboardUI({
         <main className="main-container flex-grow py-8 flex flex-col">
           <div className="flex-grow flex items-stretch gap-6">
             <div className={`grid flex-grow gap-6 ${noteCount >= 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                <AnimatePresence>
-                  {clipboard.textNotes?.map((note) => (
-                    <TextNote key={note.id} note={note} roomId={roomId} encryptionKey={encryptionKey} socket={socket} isConnected={isConnected} />
-                  ))}
-                </AnimatePresence>
+              <AnimatePresence>
+                {clipboard.textNotes?.map((note) => (
+                  <TextNote key={note.id} note={note} roomId={roomId} encryptionKey={encryptionKey} socket={socket} isConnected={isConnected} />
+                ))}
+              </AnimatePresence>
             </div>
             {noteCount < MAX_NOTES && (
               <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`flex-shrink-0 transition-all duration-500 ease-in-out ${noteCount > 0 ? 'w-20' : 'w-full'}`}>
-                <button onClick={addTextNote} disabled={!isConnected} className="w-full h-full bg-black border-2 border-dashed border-white/20 rounded-xl hover:border-white transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed group">
+                <button onClick={addTextNote} disabled={!isConnected} className="w-full h-full rounded-xl transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed group backdrop-blur-[10px] border border-white/10 hover:bg-white/10 shadow-[0_0_5px_rgba(255,255,255,0.15)] hover:shadow-[0_0_10px_rgba(255,255,255,0.25)]">
                   <Plus size={32} className="text-gray-500 group-hover:text-white transition-colors duration-200" />
                 </button>
               </motion.div>
@@ -310,23 +317,23 @@ export default function ClipboardUI({
           <h2 className="text-xl font-semibold text-gray-200 mb-6 tracking-wider">Files</h2>
           <div className="flex items-center gap-6 pb-4 overflow-x-auto px-1 pt-1">
             {clipboard.files?.map((file) => (
-              <div 
+              <div
                 key={file.id}
                 className={`flex-shrink-0 ${selectedImageId === file.id && file.type?.startsWith('image/') ? 'ring-2 ring-cyan-400 rounded-xl' : ''}`}
                 onClick={() => file.type?.startsWith('image/') && setSelectedImageId(file.id)}
               >
-                <FileCard 
-                  file={file} 
-                  encryptionKey={encryptionKey} 
-                  roomId={roomId} 
-                  isConnected={isConnected} 
-                  onImageClick={() => handleImageClick(file.url, file.id)} 
+                <FileCard
+                  file={file}
+                  encryptionKey={encryptionKey}
+                  roomId={roomId}
+                  isConnected={isConnected}
+                  onImageClick={handleImageClick}
                 />
               </div>
             ))}
             {clipboard.files?.length < 8 && (
               <label className={`cursor-pointer flex-shrink-0 ${!isConnected ? 'cursor-not-allowed' : ''}`}>
-                <div className={`border-2 border-dashed border-white/20 rounded-xl p-4 hover:border-white transition-all duration-300 w-44 h-40 flex items-center justify-center ${!isConnected ? 'opacity-50' : ''} group`}>
+                <div className={`rounded-xl p-4 transition-all duration-300 w-44 h-40 flex items-center justify-center ${!isConnected ? 'opacity-50' : ''} group backdrop-blur-[10px] border border-white/10 hover:bg-white/10 shadow-[0_0_5px_rgba(255,255,255,0.15)] hover:shadow-[0_0_10px_rgba(255,255,255,0.25)]`}>
                   <Plus size={28} className="text-gray-500 group-hover:text-white transition-colors duration-200" />
                 </div>
                 <input type="file" className="hidden" multiple onChange={(e) => Array.from(e.target.files).forEach(handleFileUpload)} disabled={!isConnected} />

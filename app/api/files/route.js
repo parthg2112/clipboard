@@ -44,6 +44,14 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Check file size (100MB limit)
+    const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ 
+        error: `File size too large. Maximum allowed size is 100MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.` 
+      }, { status: 413 }); // 413 Payload Too Large
+    }
+
     // Enforce rate limiting
     if (!checkRateLimit(roomId)) {
       return NextResponse.json({ error: 'Too many uploads. Please try again later.' }, { status: 429 });
