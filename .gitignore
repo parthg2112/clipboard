@@ -25,6 +25,7 @@
 # misc
 .DS_Store
 *.pem
+gemini.md
 
 # debug
 npm-debug.log*
