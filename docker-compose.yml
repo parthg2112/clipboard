@@ -1,0 +1,27 @@
+services:
+  app:
+    build: .
+    container_name: clipboard-app
+    restart: always
+    ports:
+      - 3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/live_clipboard
+      - PORT=3000
+    depends_on:
+      - mongo
+    volumes:
+      - ./public/uploads:/app/public/uploads
+
+  mongo:
+    image: mongo:6
+    container_name: clipboard-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
