@@ -20,7 +20,7 @@ import dynamic from 'next/dynamic';
       <html lang="en">
         <body>
         <header>
-        <script defer src="https://umami.mpst.me/script.js" data-website-id="dd2446f6-ca34-45d9-9967-b055d3b75afc"></script>
+        <script defer src="https://umami.mpst.me/script.js" data-website-id="58527263-d23e-468b-9f93-a07507ddba5e"></script>
         </header>
           <ClientOnly>
             <DynamicParticleBackground />
