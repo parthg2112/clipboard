@@ -2,10 +2,8 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
-import {getDatabase, getMongoClient} from '../../lib/mongodb';
+import {getDatabase} from '../../lib/mongodb';
 import { v4 as uuidv4 } from 'uuid';
-
-const DB_NAME = getDatabase();
 
 // --- In-memory Rate Limiter ---
 // NOTE: For a multi-server setup, a dedicated service like Redis would be better.
@@ -44,11 +42,11 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Check file size (100MB limit)
+    // Check file size
     const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || 100) * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ 
-        error: `File too large. Maximum is 100MB.` 
+        error: `File too large. Maximum is ${(MAX_FILE_SIZE / 1024) / 1024} MB.` 
       }, { status: 413 });
     }
 
@@ -77,8 +75,7 @@ export async function POST(req) {
       createdAt: Date.now(),
     };
 
-    const client = await getMongoClient();
-    const db = client.db(DB_NAME);
+    const db = await getDatabase();
 
     await db.collection('clipboards').updateOne(
       { _id: roomId },
@@ -111,8 +108,7 @@ export async function DELETE(req) {
       return NextResponse.json({ error: 'Missing roomId or fileId' }, { status: 400 });
     }
 
-    const client = await getMongoClient();
-    const db = client.db(DB_NAME);
+    const db = await getDatabase();
 
     const clipboard = await db.collection('clipboards').findOne(
       { _id: roomId },

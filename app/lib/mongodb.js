@@ -34,6 +34,6 @@ export async function getDatabase() {
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error('Missing MONGODB_URI environment variable');
 
-  const defaultDbName = uri.split('/').pop()?.split('?')[0];
-  return client.db(defaultDbName);
+  const dbName = uri.split('/').pop()?.split('?')[0];
+  return client.db(dbName);
 }
