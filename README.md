@@ -1,76 +1,135 @@
-# Secure Live Clipboard
+# 🚀 Secure Live Clipboard
 
-A real-time, end-to-end encrypted shared clipboard built with Next.js, Socket.IO, and MongoDB.
+A real-time, end-to-end encrypted shared clipboard built with **Next.js**, **Socket.IO**, and **MongoDB**.
 
-## 🎯 The Problem
+## 🎯 Problem It Solves
 
-Quickly and privately sharing text or files between devices can be cumbersome. Standard tools like messaging apps are often slow, require logins, and are not built for privacy-focused, temporary data sharing.
+Sharing text or files between devices is usually slow and annoying. Messaging apps require accounts, syncing is slow, and nothing is private. Live Clipboard gives you:
 
-## 🚀 Features
+* 🔒 **True privacy** (end-to-end encryption)
+* ⚡ **Instant syncing**
+* 🚫 **No login**
+* 🧹 **Ephemeral rooms**
 
 This application is a simple, secure, and real-time shared clipboard with the following features:
 
-* **End-to-End Encryption**: All content is encrypted and decrypted directly in your browser. The server never sees your unencrypted data.
-* **Real-Time Sync**: Changes instantly appear on all connected devices using WebSockets.
-* **Password-Protected**: Rooms are secured by a password that is never sent to the server.
-* **Text & File Sharing**: Supports both rich text notes and file uploads.
-* **Account-Free**: No sign-up required for quick, ephemeral use.
+---
+
+# ✨ Features
+
+### 🔐 End-to-End Encryption
+
+All data is encrypted **before** leaving your device. The server only stores encrypted blobs.
+
+### ⚡ Real-Time Sync
+
+Changes instantly update across all connected devices using Socket.IO.
+
+### 🔑 Password-Protected Rooms
+
+Each room is secured with a password-derived encryption key. The password is **never sent to the server**.
+
+### 📝 Text & File Sharing
+
+Supports rich text notes and file uploads.
+
+### 👤 No Accounts
+
+Everything works anonymously and resets automatically when rooms expire.
 
 ---
 
-## 🛠️ How It Works
+# 🧠 How It Works
 
-The app uses a **Next.js** and **React** frontend for the UI and client-side cryptography. The backend consists of Next.js API Routes running a **Socket.IO** server for real-time events and a REST endpoint for file handling. **MongoDB** stores the encrypted data blobs. The browser's native **Web Crypto API** derives a secret key from your password, ensuring all data is encrypted before it leaves your device.
+* The browser uses the **Web Crypto API** to derive a key from your password.
+* Text and files are encrypted locally.
+* The server handles only encrypted blobs—never plaintext.
+* MongoDB stores encrypted room data and expiration metadata.
+* A cleanup job deletes expired rooms and their files.
 
 ---
 
-## ⚙️ Getting Started
+# ⚙️ Getting Started
 
-Follow these steps to get the project running on your local machine.
+You can run Live Clipboard using:
+
+1. **Docker (recommended)**
+2. Local Node.js installation (alternative)
+
+---
+
+# 🐳 Option 1 — Run with Docker (Recommended)
+
+This is the easiest and cleanest way to run the app anywhere.
+
+## 1. Clone the repository
+
+```bash
+git clone https://github.com/parthg2112/clipboard.git
+cd clipboard
+```
+
+> If using Docker Compose, MongoDB is already built in — no external database required.
+
+## 3. Start everything
+
+```bash
+docker compose up -d
+```
+
+This will start:
+
+* Next.js app
+* Socket.IO server
+* MongoDB
+* Automatic volume storage
+
+## 4. Open the app
+
+Go to:
+
+```
+http://localhost:3000
+```
+
+Create a room with a password and open the same room on another device to sync in realtime.
+
+---
+
+# 🟢 Option 2 — Run Locally (No Docker)
 
 ### Prerequisites
 
-* [Node.js](https://nodejs.org/) (v18.x or later)
-* [pnpm](https://pnpm.io/)
-* A [MongoDB](https://www.mongodb.com/try) database connection string (URI).
+* Node.js **18+**
+* A MongoDB instance (local or cloud)
 
-> **Note:** If you don't have `pnpm` installed, you can install it globally using `npm` (which comes with Node.js):
-> ```bash
-> npm install -g pnpm
-> ```
+### Install dependencies
 
-### 📦 Installation
+```bash
+npm install
+```
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/parthg2112/clipboard.git
-    cd clipboard
-    ```
+### Create `.env`
 
-2.  **Install dependencies:**
-    ```bash
-    pnpm install
-    ```
+```env
+MONGODB_URI="mongodb://user:pass@host/live_clipboard"
+MAX_FILE_SIZE=100 # in MB
+PORT=3000
+```
 
-3.  **Set up environment variables:**
-    Create a new file named `.env.local` in the root of the project and add your MongoDB connection string.
+### Start the development server
 
-    ```env
-    # .env.local
-    MONGODB_URI="your_mongodb_connection_string"
-    CLIPBOARD_DB_NAME="your_database_name"
+```bash
+npm dev
+```
 
-    SOCKET_PORT=3000
-    NEXT_PUBLIC_SOCKET_PORT=3000
+Open:
 
-    NEXT_PUBLIC_APP_URL=http://localhost:3000
-    ```
-    > **Important:** Make sure your MongoDB password in the URI is URL-encoded if it contains special characters (like `@`, `:`, `#`).
+```
+http://localhost:3000
+```
 
-4.  **Run the development server:**
-    ```bash
-    pnpm dev
-    ```
+---
 
 5.  **Open the application:**
     Navigate to `http://localhost:3000` in your web browser. Create a room by entering any password, and open the same URL on another device or tab with the same password to see the real-time sync in action.

@@ -1,12 +1,13 @@
 import bundleAnalyzer from '@next/bundle-analyzer';
 
-  const withBundleAnalyzer = bundleAnalyzer({
-    enabled: process.env.ANALYZE === 'true',
-  });
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
 
-  /** @type {import('next').NextConfig} */
-  const nextConfig = {
-    
-  };
+const maxFileSizeMB = parseInt(process.env.MAX_FILE_SIZE || '100', 10);
 
-  export default withBundleAnalyzer(nextConfig);
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+};
+
+export default withBundleAnalyzer(nextConfig);

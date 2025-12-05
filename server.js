@@ -1,6 +1,5 @@
 // server.js
-require('dotenv').config({ path: './.env.local' });
-
+require('dotenv').config();
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
@@ -11,14 +10,14 @@ const fs = require('fs');
 const path = require('path');
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
-const port = process.env.PORT || 3020;
+const hostname = dev ? "localhost" : "0.0.0.0";
+const port = process.env.PORT || 3000;
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 const MONGODB_URI = process.env.MONGODB_URI;
-const DB_NAME = process.env.CLIPBOARD_DB_NAME || 'live_clipboard';
+const DB_NAME = MONGODB_URI.split('/').pop();
 if (!MONGODB_URI) {
     throw new Error('Please define the MONGODB_URI environment variable in .env.local');
 }

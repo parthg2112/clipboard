@@ -1,27 +1,36 @@
+version: "3.9"
+
 services:
   app:
     build: .
     container_name: clipboard-app
     restart: always
     ports:
-      - 3000:3000"
+      - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongo:27017/live_clipboard
-      - PORT=3000
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongo:27017/live_clipboard
+      MAX_FILE_SIZE: 100
+      PORT: 3000
     depends_on:
       - mongo
     volumes:
       - ./public/uploads:/app/public/uploads
+    networks:
+      - internal
 
   mongo:
     image: mongo:6
     container_name: clipboard-mongo
     restart: always
-    ports:
-      - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    networks:
+      - internal
 
 volumes:
   mongodb_data:
+
+networks:
+  internal:
+    driver: bridge
