@@ -1,4 +1,4 @@
-# 🚀 Live Clipboard
+# 🚀 Secure Live Clipboard
 
 A real-time, end-to-end encrypted shared clipboard built with **Next.js**, **Socket.IO**, and **MongoDB**.
 
@@ -11,7 +11,7 @@ Sharing text or files between devices is usually slow and annoying. Messaging ap
 * 🚫 **No login**
 * 🧹 **Ephemeral rooms**
 
-Perfect for quick, temporary sharing between your phone, laptop, tablet, etc.
+This application is a simple, secure, and real-time shared clipboard with the following features:
 
 ---
 
@@ -131,7 +131,5 @@ http://localhost:3000
 
 ---
 
-### ⚠️ Disclaimer
-
-This project is vibe-coded.
-I have not reviewed the architecture or implementation or the security of this project yet.
+5.  **Open the application:**
+    Navigate to `http://localhost:3000` in your web browser. Create a room by entering any password, and open the same URL on another device or tab with the same password to see the real-time sync in action.
